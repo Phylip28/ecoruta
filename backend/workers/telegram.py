@@ -1,5 +1,4 @@
 import httpx
-
 from config import settings
 
 
@@ -26,9 +25,7 @@ async def notificar_cambio_estado(
     if estado == "en_camino":
         mensaje = "Tu reciclador esta en camino. Gracias por reciclar."
     elif estado == "completado":
-        mensaje = (
-            f"Recoleccion completada. Desviaste {kg_estimados} kg del relleno."
-        )
+        mensaje = f"Recoleccion completada. Desviaste {kg_estimados} kg del relleno."
     else:
         return False
 

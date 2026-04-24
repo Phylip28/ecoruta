@@ -5,8 +5,10 @@ export const colors = {
   textDark: "#0D2238",
   textMuted: "#4B5B6A",
   accent: "#1FB77E",
+  deepGreen: "#0A8D62",
   warning: "#D98324",
   danger: "#BE3A34",
+  outline: "#D7E1EA",
 };
 
 export const spacing = {

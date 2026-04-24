@@ -7,15 +7,15 @@ import {
   Card,
   Chip,
   FAB,
-  List,
   SegmentedButtons,
-  Surface,
+  Snackbar,
   Text,
   TextInput,
   useTheme,
 } from "react-native-paper";
 
-import { getHealth } from "../../../core/api/client";
+import { crearReporte, crearSolicitud, getHealth } from "../../../core/api/client";
+import { env } from "../../../config/env";
 import { RecicladorScreen } from "../../reciclador/screens/RecicladorScreen";
 
 type VistaSesion = "ciudadano" | "reciclador";
@@ -28,7 +28,14 @@ export function HomeScreen() {
   const [materialSeleccionado, setMaterialSeleccionado] = useState<Material>("mixto");
   const [descripcionReporte, setDescripcionReporte] = useState("");
   const [descripcionSolicitud, setDescripcionSolicitud] = useState("");
-  const [telegramId, setTelegramId] = useState("");
+  const [telegramId, setTelegramId] = useState(String(env.mobile.demoTelegramId));
+  const [cargandoReporte, setCargandoReporte] = useState(false);
+  const [cargandoSolicitud, setCargandoSolicitud] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ visible: boolean; mensaje: string; error: boolean }>({
+    visible: false,
+    mensaje: "",
+    error: false,
+  });
 
   useEffect(() => {
     getHealth()
@@ -36,31 +43,75 @@ export function HomeScreen() {
       .catch(() => setBackendStatus("sin conexion"));
   }, []);
 
-  const statusData = useMemo(() => {
-    if (backendStatus === "ok") {
-      return {
-        label: "Backend activo",
-        severity: "ok",
-      };
-    }
-
-    if (backendStatus === "verificando") {
-      return {
-        label: "Revisando backend",
-        severity: "loading",
-      };
-    }
-
-    return {
-      label: "Backend no disponible",
-      severity: "error",
-    };
+  const statusSeverity = useMemo(() => {
+    if (backendStatus === "ok") return "ok";
+    if (backendStatus === "verificando") return "loading";
+    return "error";
   }, [backendStatus]);
+
+  function mostrarMensaje(mensaje: string, error = false) {
+    setSnackbar({ visible: true, mensaje, error });
+  }
+
+  async function enviarReporte() {
+    setCargandoReporte(true);
+    try {
+      const data = await crearReporte({
+        tipo: "emergencia",
+        latitud: env.mobile.latitudInicial,
+        longitud: env.mobile.longitudInicial,
+        descripcion: descripcionReporte || undefined,
+      });
+      mostrarMensaje(`Reporte #${data.id} enviado.`);
+      setDescripcionReporte("");
+    } catch (err) {
+      mostrarMensaje(err instanceof Error ? err.message : "Error al enviar reporte.", true);
+    } finally {
+      setCargandoReporte(false);
+    }
+  }
+
+  async function enviarSolicitud() {
+    const tid = Number(telegramId);
+    if (!Number.isFinite(tid) || tid <= 0) {
+      mostrarMensaje("Ingresa un Telegram ID valido.", true);
+      return;
+    }
+    setCargandoSolicitud(true);
+    try {
+      const data = await crearSolicitud({
+        latitud: env.mobile.latitudInicial,
+        longitud: env.mobile.longitudInicial,
+        material: materialSeleccionado,
+        ciudadano_telegram_id: tid,
+        descripcion: descripcionSolicitud || undefined,
+        kg_estimados: 0,
+      });
+      mostrarMensaje(`Solicitud #${data.id} enviada. Te avisamos por Telegram.`);
+      setDescripcionSolicitud("");
+    } catch (err) {
+      mostrarMensaje(err instanceof Error ? err.message : "Error al enviar solicitud.", true);
+    } finally {
+      setCargandoSolicitud(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <Appbar.Header mode="small" elevated>
-        <Appbar.Content title="EcoRuta Mobile" subtitle="Gestion de sesion ciudadana y reciclador" />
+        <Appbar.Content title="EcoRuta" />
+        <Badge
+          style={[
+            styles.statusBadge,
+            statusSeverity === "ok"
+              ? { backgroundColor: theme.colors.primary }
+              : statusSeverity === "loading"
+                ? { backgroundColor: theme.colors.tertiary }
+                : { backgroundColor: theme.colors.error },
+          ]}
+        >
+          {backendStatus}
+        </Badge>
       </Appbar.Header>
 
       <View style={styles.switchContainer}>
@@ -78,67 +129,46 @@ export function HomeScreen() {
       {vista === "ciudadano" ? (
         <>
           <ScrollView contentContainerStyle={styles.container}>
-            <Surface style={styles.statusSurface} elevation={2}>
-              <View style={styles.statusHeader}>
-                <Text variant="titleMedium" style={styles.statusTitle}>
-                  Estado del sistema
-                </Text>
-                <Badge
-                  style={[
-                    styles.statusBadge,
-                    statusData.severity === "ok"
-                      ? { backgroundColor: theme.colors.primary }
-                      : statusData.severity === "loading"
-                        ? { backgroundColor: theme.colors.tertiary }
-                        : { backgroundColor: theme.colors.error },
-                  ]}
-                >
-                  {statusData.label}
-                </Badge>
-              </View>
-              <Text variant="bodyMedium" style={styles.statusBody}>
-                Interfaz de alto contraste para uso en calle y bajo luz intensa.
-              </Text>
-            </Surface>
-
             <Card mode="elevated" style={styles.card}>
-              <Card.Title title="HU-1 Reportar punto critico" subtitle="Foto + GPS + descripcion" />
+              <Card.Title title="Reportar punto critico" />
               <Card.Content style={styles.cardContent}>
                 <TextInput
                   mode="outlined"
-                  label="Descripcion del punto"
+                  label="Descripcion"
                   value={descripcionReporte}
                   onChangeText={setDescripcionReporte}
                   multiline
                   numberOfLines={3}
                 />
-                <Button mode="contained-tonal" icon="camera" contentStyle={styles.buttonTall}>
-                  Tomar foto
-                </Button>
-                <Button mode="contained" icon="map-marker" contentStyle={styles.buttonTall}>
-                  Capturar ubicacion y enviar reporte
+                <Button
+                  mode="contained"
+                  icon="map-marker"
+                  contentStyle={styles.buttonTall}
+                  loading={cargandoReporte}
+                  disabled={cargandoReporte}
+                  onPress={() => void enviarReporte()}
+                >
+                  Enviar reporte
                 </Button>
               </Card.Content>
             </Card>
 
             <Card mode="elevated" style={styles.card}>
-              <Card.Title title="HU-2 Solicitar recoleccion" subtitle="Material + Telegram + envio" />
+              <Card.Title title="Solicitar recoleccion" />
               <Card.Content style={styles.cardContent}>
-                <Text variant="labelLarge">Material reciclable</Text>
+                <Text variant="labelLarge">Material</Text>
                 <View style={styles.chipRow}>
-                  {(["carton", "vidrio", "plastico", "mixto"] as Material[]).map(
-                    (material) => (
-                      <Chip
-                        key={material}
-                        selected={materialSeleccionado === material}
-                        showSelectedOverlay
-                        onPress={() => setMaterialSeleccionado(material)}
-                        style={styles.chip}
-                      >
-                        {material}
-                      </Chip>
-                    )
-                  )}
+                  {(["carton", "vidrio", "plastico", "mixto"] as Material[]).map((material) => (
+                    <Chip
+                      key={material}
+                      selected={materialSeleccionado === material}
+                      showSelectedOverlay
+                      onPress={() => setMaterialSeleccionado(material)}
+                      style={styles.chip}
+                    >
+                      {material}
+                    </Chip>
+                  ))}
                 </View>
 
                 <TextInput
@@ -150,47 +180,40 @@ export function HomeScreen() {
                 />
                 <TextInput
                   mode="outlined"
-                  label="Descripcion opcional"
+                  label="Descripcion (opcional)"
                   value={descripcionSolicitud}
                   onChangeText={setDescripcionSolicitud}
                 />
-
-                <Button mode="contained" icon="send" contentStyle={styles.buttonTall}>
-                  Enviar solicitud de recoleccion
+                <Button
+                  mode="contained"
+                  icon="send"
+                  contentStyle={styles.buttonTall}
+                  loading={cargandoSolicitud}
+                  disabled={cargandoSolicitud}
+                  onPress={() => void enviarSolicitud()}
+                >
+                  Solicitar recoleccion
                 </Button>
               </Card.Content>
             </Card>
-
-            <List.Section>
-              <List.Subheader>Seguimiento de sesion</List.Subheader>
-              <List.Item
-                title="Solicitud en revision"
-                description="Reciclador asignado en ruta"
-                left={(props) => <List.Icon {...props} icon="progress-clock" />}
-              />
-              <List.Item
-                title="Notificacion por Telegram"
-                description="Se enviara al cambiar estado"
-                left={(props) => <List.Icon {...props} icon="message-text" />}
-              />
-              <List.Item
-                title="Impacto ambiental"
-                description="Visualiza kg desviados al completar"
-                left={(props) => <List.Icon {...props} icon="leaf" />}
-              />
-            </List.Section>
           </ScrollView>
 
-          <FAB
-            icon="plus"
-            label="Nueva accion"
-            style={styles.fab}
-            onPress={() => setVista("reciclador")}
-          />
+          <FAB icon="bike" style={styles.fab} onPress={() => setVista("reciclador")} />
         </>
       ) : (
         <RecicladorScreen />
       )}
+
+      <Snackbar
+        visible={snackbar.visible}
+        onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
+        duration={3500}
+        style={snackbar.error ? { backgroundColor: theme.colors.errorContainer } : undefined}
+      >
+        <Text style={snackbar.error ? { color: theme.colors.onErrorContainer } : undefined}>
+          {snackbar.mensaje}
+        </Text>
+      </Snackbar>
     </SafeAreaView>
   );
 }
@@ -210,36 +233,17 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
     gap: 14,
   },
-  statusSurface: {
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 6,
-  },
-  statusHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  statusTitle: {
-    fontWeight: "700",
-    flex: 1,
-    fontSize: 18,
-  },
   statusBadge: {
-    alignSelf: "flex-start",
+    marginRight: 12,
     color: "#FFFFFF",
     fontSize: 12,
-  },
-  statusBody: {
-    marginTop: 8,
-    fontSize: 16,
   },
   card: {
     borderRadius: 18,
   },
   cardContent: {
     gap: 12,
+    paddingBottom: 8,
   },
   chipRow: {
     flexDirection: "row",

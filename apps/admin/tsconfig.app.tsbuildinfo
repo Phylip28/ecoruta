@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/components/HeatmapList.tsx","./src/components/MetricCard.tsx","./src/core/api.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/HeatmapList.tsx","./src/components/MapaHeatmap.tsx","./src/components/MetricCard.tsx","./src/core/api.ts"],"version":"5.9.3"}

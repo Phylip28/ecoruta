@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Leaf, MapPinned, RefreshCcw } from "lucide-react";
 
 import { HeatmapList } from "./components/HeatmapList";
+import { MapaHeatmap } from "./components/MapaHeatmap";
 import { MetricCard } from "./components/MetricCard";
 import { getHealth, getHeatmap, getImpacto, type HeatmapPoint, type Impacto } from "./core/api";
 
@@ -92,11 +93,19 @@ export default function App() {
           />
         </div>
 
+        <article className="mt-6 rounded-2xl bg-white p-5 shadow-soft ring-1 ring-slate-200">
+          <div className="mb-4 flex items-center gap-2">
+            <MapPinned className="h-5 w-5 text-eco-fern" />
+            <h2 className="text-lg font-semibold">Mapa de calor geoespacial</h2>
+          </div>
+          <MapaHeatmap points={heatmap} />
+        </article>
+
         <section className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <article className="rounded-2xl bg-white p-5 shadow-soft ring-1 ring-slate-200">
             <div className="mb-4 flex items-center gap-2">
               <MapPinned className="h-5 w-5 text-eco-fern" />
-              <h2 className="text-lg font-semibold">Heatmap (base de datos de puntos)</h2>
+              <h2 className="text-lg font-semibold">Listado de puntos activos</h2>
             </div>
             <HeatmapList points={heatmap} />
           </article>

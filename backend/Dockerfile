@@ -6,8 +6,8 @@ ENV UV_PROJECT_ENVIRONMENT=/usr/local
 
 RUN pip install --no-cache-dir uv
 
-COPY pyproject.toml /app/pyproject.toml
-RUN uv sync --all-groups
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --all-groups --frozen
 
 COPY . /app
 

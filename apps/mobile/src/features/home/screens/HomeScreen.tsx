@@ -1,24 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
+import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
 import {
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
+  Appbar,
+  Badge,
+  Button,
+  Card,
+  Chip,
+  FAB,
+  List,
+  SegmentedButtons,
+  Surface,
   Text,
-  View,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+  TextInput,
+  useTheme,
+} from "react-native-paper";
 
 import { getHealth } from "../../../core/api/client";
-import { colors, spacing } from "../../../theme/tokens";
-import { ActionCard } from "../components/ActionCard";
 import { RecicladorScreen } from "../../reciclador/screens/RecicladorScreen";
 
-type VistaSesion = "inicio" | "reciclador";
+type VistaSesion = "ciudadano" | "reciclador";
+type Material = "carton" | "vidrio" | "plastico" | "mixto";
 
 export function HomeScreen() {
+  const theme = useTheme();
   const [backendStatus, setBackendStatus] = useState("verificando");
-  const [vista, setVista] = useState<VistaSesion>("inicio");
+  const [vista, setVista] = useState<VistaSesion>("ciudadano");
+  const [materialSeleccionado, setMaterialSeleccionado] = useState<Material>("mixto");
+  const [descripcionReporte, setDescripcionReporte] = useState("");
+  const [descripcionSolicitud, setDescripcionSolicitud] = useState("");
+  const [telegramId, setTelegramId] = useState("");
 
   useEffect(() => {
     getHealth()
@@ -26,144 +36,225 @@ export function HomeScreen() {
       .catch(() => setBackendStatus("sin conexion"));
   }, []);
 
-  const statusLabel = useMemo(() => {
+  const statusData = useMemo(() => {
     if (backendStatus === "ok") {
-      return "backend activo";
+      return {
+        label: "Backend activo",
+        severity: "ok",
+      };
     }
+
     if (backendStatus === "verificando") {
-      return "revisando backend";
+      return {
+        label: "Revisando backend",
+        severity: "loading",
+      };
     }
-    return "backend no disponible";
+
+    return {
+      label: "Backend no disponible",
+      severity: "error",
+    };
   }, [backendStatus]);
 
   return (
-    <LinearGradient colors={[colors.bgDeep, colors.bgSoft]} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.badge}>EcoRuta Mobile</Text>
-          <Text style={styles.title}>Panel de sesiones</Text>
-          <Text style={styles.subtitle}>
-            Base modular para ciudadano y reciclador. Estado backend: {statusLabel}.
-          </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <Appbar.Header mode="small" elevated>
+        <Appbar.Content title="EcoRuta Mobile" subtitle="Gestion de sesion ciudadana y reciclador" />
+      </Appbar.Header>
 
-          <View style={styles.switchRow}>
-            <Pressable
-              onPress={() => setVista("inicio")}
-              style={[styles.switchItem, vista === "inicio" && styles.switchItemActive]}
-            >
-              <Text style={[styles.switchText, vista === "inicio" && styles.switchTextActive]}>
-                Inicio
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setVista("reciclador")}
-              style={[styles.switchItem, vista === "reciclador" && styles.switchItemActive]}
-            >
-              <Text
-                style={[
-                  styles.switchText,
-                  vista === "reciclador" && styles.switchTextActive,
-                ]}
-              >
-                Sesion reciclador
-              </Text>
-            </Pressable>
-          </View>
+      <View style={styles.switchContainer}>
+        <SegmentedButtons
+          value={vista}
+          onValueChange={(value) => setVista(value as VistaSesion)}
+          density="regular"
+          buttons={[
+            { value: "ciudadano", label: "Ciudadano", icon: "account" },
+            { value: "reciclador", label: "Reciclador", icon: "bike" },
+          ]}
+        />
+      </View>
 
-          {vista === "inicio" ? (
-            <View style={styles.cards}>
-              <ActionCard
-                title="Reportar punto critico"
-                description="Captura foto y coordenadas GPS para emergencias de residuos."
-                tone="danger"
+      {vista === "ciudadano" ? (
+        <>
+          <ScrollView contentContainerStyle={styles.container}>
+            <Surface style={styles.statusSurface} elevation={2}>
+              <View style={styles.statusHeader}>
+                <Text variant="titleMedium" style={styles.statusTitle}>
+                  Estado del sistema
+                </Text>
+                <Badge
+                  style={[
+                    styles.statusBadge,
+                    statusData.severity === "ok"
+                      ? { backgroundColor: theme.colors.primary }
+                      : statusData.severity === "loading"
+                        ? { backgroundColor: theme.colors.tertiary }
+                        : { backgroundColor: theme.colors.error },
+                  ]}
+                >
+                  {statusData.label}
+                </Badge>
+              </View>
+              <Text variant="bodyMedium" style={styles.statusBody}>
+                Interfaz de alto contraste para uso en calle y bajo luz intensa.
+              </Text>
+            </Surface>
+
+            <Card mode="elevated" style={styles.card}>
+              <Card.Title title="HU-1 Reportar punto critico" subtitle="Foto + GPS + descripcion" />
+              <Card.Content style={styles.cardContent}>
+                <TextInput
+                  mode="outlined"
+                  label="Descripcion del punto"
+                  value={descripcionReporte}
+                  onChangeText={setDescripcionReporte}
+                  multiline
+                  numberOfLines={3}
+                />
+                <Button mode="contained-tonal" icon="camera" contentStyle={styles.buttonTall}>
+                  Tomar foto
+                </Button>
+                <Button mode="contained" icon="map-marker" contentStyle={styles.buttonTall}>
+                  Capturar ubicacion y enviar reporte
+                </Button>
+              </Card.Content>
+            </Card>
+
+            <Card mode="elevated" style={styles.card}>
+              <Card.Title title="HU-2 Solicitar recoleccion" subtitle="Material + Telegram + envio" />
+              <Card.Content style={styles.cardContent}>
+                <Text variant="labelLarge">Material reciclable</Text>
+                <View style={styles.chipRow}>
+                  {(["carton", "vidrio", "plastico", "mixto"] as Material[]).map(
+                    (material) => (
+                      <Chip
+                        key={material}
+                        selected={materialSeleccionado === material}
+                        showSelectedOverlay
+                        onPress={() => setMaterialSeleccionado(material)}
+                        style={styles.chip}
+                      >
+                        {material}
+                      </Chip>
+                    )
+                  )}
+                </View>
+
+                <TextInput
+                  mode="outlined"
+                  label="Telegram ID"
+                  keyboardType="number-pad"
+                  value={telegramId}
+                  onChangeText={setTelegramId}
+                />
+                <TextInput
+                  mode="outlined"
+                  label="Descripcion opcional"
+                  value={descripcionSolicitud}
+                  onChangeText={setDescripcionSolicitud}
+                />
+
+                <Button mode="contained" icon="send" contentStyle={styles.buttonTall}>
+                  Enviar solicitud de recoleccion
+                </Button>
+              </Card.Content>
+            </Card>
+
+            <List.Section>
+              <List.Subheader>Seguimiento de sesion</List.Subheader>
+              <List.Item
+                title="Solicitud en revision"
+                description="Reciclador asignado en ruta"
+                left={(props) => <List.Icon {...props} icon="progress-clock" />}
               />
-              <ActionCard
-                title="Solicitar recoleccion"
-                description="Solicita retiro de material reciclable y sigue el estado de la ruta."
-                tone="normal"
+              <List.Item
+                title="Notificacion por Telegram"
+                description="Se enviara al cambiar estado"
+                left={(props) => <List.Icon {...props} icon="message-text" />}
               />
-              <ActionCard
-                title="Vista reciclador"
-                description="Activa la sesion de reciclador para calcular ruta y actualizar estados."
-                tone="warning"
-                onPress={() => setVista("reciclador")}
+              <List.Item
+                title="Impacto ambiental"
+                description="Visualiza kg desviados al completar"
+                left={(props) => <List.Icon {...props} icon="leaf" />}
               />
-            </View>
-          ) : (
-            <RecicladorScreen />
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
+            </List.Section>
+          </ScrollView>
+
+          <FAB
+            icon="plus"
+            label="Nueva accion"
+            style={styles.fab}
+            onPress={() => setVista("reciclador")}
+          />
+        </>
+      ) : (
+        <RecicladorScreen />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
+    backgroundColor: "#F4F8F3",
+  },
+  switchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 6,
   },
   container: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: 16,
+    paddingBottom: 90,
+    gap: 14,
   },
-  badge: {
-    alignSelf: "flex-start",
-    color: "#D7E3EE",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    overflow: "hidden",
-    fontSize: 12,
-    marginBottom: spacing.md,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  statusSurface: {
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 6,
   },
-  title: {
-    color: "#FFFFFF",
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: "700",
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    color: "#D7E3EE",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
-  switchRow: {
+  statusHeader: {
     flexDirection: "row",
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  switchItem: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.25)",
-    borderRadius: 999,
-    paddingVertical: spacing.xs,
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    justifyContent: "space-between",
+    gap: 12,
   },
-  switchItemActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-  },
-  switchText: {
-    color: "#E5EDF4",
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+  statusTitle: {
     fontWeight: "700",
+    flex: 1,
+    fontSize: 18,
   },
-  switchTextActive: {
-    color: colors.textDark,
+  statusBadge: {
+    alignSelf: "flex-start",
+    color: "#FFFFFF",
+    fontSize: 12,
   },
-  cards: {
-    marginTop: spacing.sm,
+  statusBody: {
+    marginTop: 8,
+    fontSize: 16,
+  },
+  card: {
+    borderRadius: 18,
+  },
+  cardContent: {
+    gap: 12,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    borderRadius: 12,
+  },
+  buttonTall: {
+    minHeight: 52,
+  },
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 16,
   },
 });

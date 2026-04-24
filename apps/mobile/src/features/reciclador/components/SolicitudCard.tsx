@@ -1,6 +1,14 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet } from "react-native";
+import {
+  Button,
+  Card,
+  Chip,
+  List,
+  ProgressBar,
+  Text,
+  useTheme,
+} from "react-native-paper";
 
-import { colors, spacing } from "../../../theme/tokens";
 import type { EstadoSolicitud, Solicitud } from "../types";
 
 type SolicitudCardProps = {
@@ -9,10 +17,10 @@ type SolicitudCardProps = {
   disabled?: boolean;
 };
 
-const estadoColor: Record<EstadoSolicitud, string> = {
-  pendiente: colors.warning,
-  en_camino: colors.accent,
-  completado: colors.deepGreen,
+const estadoInfo: Record<EstadoSolicitud, { label: string; progress: number }> = {
+  pendiente: { label: "Pendiente", progress: 0.33 },
+  en_camino: { label: "En camino", progress: 0.66 },
+  completado: { label: "Completado", progress: 1 },
 };
 
 export function SolicitudCard({
@@ -20,126 +28,112 @@ export function SolicitudCard({
   onEstado,
   disabled = false,
 }: SolicitudCardProps) {
+  const theme = useTheme();
   const puedeEnCamino = solicitud.estado === "pendiente";
   const puedeCompletar = solicitud.estado === "en_camino";
+  const info = estadoInfo[solicitud.estado];
+
+  const accionSiguiente = puedeEnCamino
+    ? "Aceptar ruta"
+    : puedeCompletar
+      ? "Completar servicio"
+      : "Servicio finalizado";
 
   return (
-    <View style={styles.card}>
-      <View style={[styles.estadoBadge, { backgroundColor: estadoColor[solicitud.estado] }]}>
-        <Text style={styles.estadoText}>{solicitud.estado}</Text>
-      </View>
+    <Card mode="elevated" style={styles.card}>
+      <Card.Title
+        title={`Solicitud #${solicitud.id}`}
+        titleVariant="titleLarge"
+        subtitle={`Material: ${solicitud.material ?? "mixto"} · ${solicitud.kg_estimados} kg`}
+        right={() => (
+          <Chip compact style={styles.stateChip} textStyle={styles.stateChipText}>
+            {info.label}
+          </Chip>
+        )}
+      />
 
-      <Text style={styles.title}>Solicitud #{solicitud.id}</Text>
-      <Text style={styles.meta}>
-        Material: {solicitud.material ?? "mixto"} | KG: {solicitud.kg_estimados}
-      </Text>
-      <Text style={styles.meta}>
-        Lat/Lon: {solicitud.latitud.toFixed(4)}, {solicitud.longitud.toFixed(4)}
-      </Text>
-      <Text style={styles.desc}>{solicitud.descripcion ?? "Sin descripcion"}</Text>
+      <Card.Content style={styles.content}>
+        <List.Item
+          title={solicitud.descripcion ?? "Sin descripcion"}
+          titleNumberOfLines={2}
+          description={`Lat/Lon: ${solicitud.latitud.toFixed(4)}, ${solicitud.longitud.toFixed(4)}`}
+          left={(props) => <List.Icon {...props} icon="map-marker" color={theme.colors.primary} />}
+          style={styles.listRow}
+        />
+        <Text variant="bodyLarge" style={styles.nextAction}>
+          Siguiente paso: {accionSiguiente}
+        </Text>
+        <ProgressBar
+          progress={info.progress}
+          color={theme.colors.primary}
+          style={styles.progress}
+        />
+      </Card.Content>
 
-      <View style={styles.actions}>
-        <Pressable
+      <Card.Actions style={styles.actions}>
+        <Button
+          mode="contained"
           disabled={disabled || !puedeEnCamino}
           onPress={() => onEstado(solicitud.id, "en_camino")}
-          style={({ pressed }) => [
-            styles.button,
-            styles.primary,
-            (disabled || !puedeEnCamino) && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
+          contentStyle={styles.buttonTall}
+          labelStyle={styles.buttonLabel}
         >
-          <Text style={styles.primaryText}>Pasar a en_camino</Text>
-        </Pressable>
-
-        <Pressable
+          Aceptar ruta
+        </Button>
+        <Button
+          mode="contained-tonal"
           disabled={disabled || !puedeCompletar}
           onPress={() => onEstado(solicitud.id, "completado")}
-          style={({ pressed }) => [
-            styles.button,
-            styles.secondary,
-            (disabled || !puedeCompletar) && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
+          contentStyle={styles.buttonTall}
+          labelStyle={styles.buttonLabel}
         >
-          <Text style={styles.secondaryText}>Marcar completado</Text>
-        </Pressable>
-      </View>
-    </View>
+          Completar
+        </Button>
+      </Card.Actions>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
     borderRadius: 18,
-    padding: spacing.md,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.outline,
+    marginBottom: 12,
   },
-  estadoBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+  content: {
+    gap: 6,
   },
-  estadoText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+  stateChip: {
+    marginRight: 14,
+    marginTop: 8,
+  },
+  stateChipText: {
     fontWeight: "700",
   },
-  title: {
-    color: colors.textDark,
-    fontWeight: "700",
+  listRow: {
+    paddingHorizontal: 0,
+  },
+  nextAction: {
     fontSize: 16,
+    fontWeight: "700",
+    marginTop: 2,
+    marginBottom: 2,
   },
-  meta: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  desc: {
-    color: colors.textDark,
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: spacing.xs,
+  progress: {
+    height: 10,
+    borderRadius: 999,
   },
   actions: {
-    flexDirection: "row",
-    gap: spacing.xs,
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    gap: 8,
   },
-  button: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
+  buttonTall: {
+    minHeight: 52,
   },
-  primary: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  secondary: {
-    backgroundColor: "#FFFFFF",
-    borderColor: colors.outline,
-  },
-  primaryText: {
+  buttonLabel: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: "700",
-  },
-  secondaryText: {
-    color: colors.textDark,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  buttonDisabled: {
-    opacity: 0.45,
   },
 });

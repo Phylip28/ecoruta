@@ -1,16 +1,19 @@
 import { useMemo, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
+  Banner,
+  Button,
+  FAB,
+  HelperText,
+  List,
+  Surface,
   Text,
   TextInput,
-  View,
-} from "react-native";
+  useTheme,
+} from "react-native-paper";
 
 import { env } from "../../../config/env";
-import { colors, spacing } from "../../../theme/tokens";
 import {
   actualizarEstadoSolicitud,
   crearSolicitudDemo,
@@ -26,6 +29,7 @@ function numeroSeguro(value: string, fallback: number): number {
 }
 
 export function RecicladorScreen() {
+  const theme = useTheme();
   const [recicladorId, setRecicladorId] = useState(String(env.mobile.recicladorId));
   const [latitud, setLatitud] = useState(String(env.mobile.latitudInicial));
   const [longitud, setLongitud] = useState(String(env.mobile.longitudInicial));
@@ -42,6 +46,24 @@ export function RecicladorScreen() {
 
     return { pendientes, enCamino };
   }, [solicitudes]);
+
+  const solicitudActiva = useMemo(() => {
+    if (rutaIds.length > 0) {
+      const porId = new Map(solicitudes.map((item) => [item.id, item]));
+      for (const id of rutaIds) {
+        const encontrada = porId.get(id);
+        if (encontrada) {
+          return encontrada;
+        }
+      }
+    }
+
+    return (
+      solicitudes.find((item) => item.estado === "en_camino") ??
+      solicitudes.find((item) => item.estado === "pendiente") ??
+      null
+    );
+  }, [rutaIds, solicitudes]);
 
   async function ejecutar(action: () => Promise<void>) {
     setCargando(true);
@@ -136,85 +158,138 @@ export function RecicladorScreen() {
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.sectionTitle}>Sesion reciclador</Text>
-      <Text style={styles.sectionSubtitle}>
-        Flujo punto 3: pendientes, ruta sugerida y cambio de estado en campo.
-      </Text>
+      <Banner
+        visible
+        icon="white-balance-sunny"
+        style={styles.banner}
+        actions={[
+          {
+            label: "Cargar pendientes",
+            onPress: cargarPendientes,
+          },
+          {
+            label: "Calcular ruta",
+            onPress: calcularRuta,
+          },
+        ]}
+      >
+        Sesion reciclador en modo calle: botones amplios y lectura rapida bajo sol.
+      </Banner>
 
-      <View style={styles.panel}>
-        <Text style={styles.label}>Reciclador ID</Text>
+      <Surface style={styles.activeSurface} elevation={2}>
+        <Text variant="titleLarge" style={styles.activeTitle}>
+          Solicitud activa mas cercana
+        </Text>
+
+        {solicitudActiva ? (
+          <>
+            <List.Item
+              title={`Solicitud #${solicitudActiva.id}`}
+              description={`${solicitudActiva.material ?? "mixto"} · ${solicitudActiva.kg_estimados} kg`}
+              left={(props) => (
+                <List.Icon {...props} icon="bike-fast" color={theme.colors.primary} />
+              )}
+              style={styles.activeRow}
+            />
+
+            <View style={styles.quickActions}>
+              <Button
+                mode="contained"
+                onPress={() => cambiarEstado(solicitudActiva.id, "en_camino")}
+                disabled={cargando || solicitudActiva.estado !== "pendiente"}
+                contentStyle={styles.buttonTall}
+              >
+                Aceptar ruta
+              </Button>
+              <Button
+                mode="contained-tonal"
+                onPress={() => cambiarEstado(solicitudActiva.id, "completado")}
+                disabled={cargando || solicitudActiva.estado !== "en_camino"}
+                contentStyle={styles.buttonTall}
+              >
+                Completar servicio
+              </Button>
+            </View>
+          </>
+        ) : (
+          <Text variant="bodyLarge">No hay solicitud activa en este momento.</Text>
+        )}
+      </Surface>
+
+      <Surface style={styles.panel} elevation={1}>
+        <Text variant="titleMedium" style={styles.panelTitle}>
+          Parametros de ruta
+        </Text>
         <TextInput
+          mode="outlined"
+          label="Reciclador ID"
           value={recicladorId}
           onChangeText={setRecicladorId}
           keyboardType="numeric"
-          style={styles.input}
         />
-
         <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>Latitud</Text>
-            <TextInput
-              value={latitud}
-              onChangeText={setLatitud}
-              keyboardType="decimal-pad"
-              style={styles.input}
-            />
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>Longitud</Text>
-            <TextInput
-              value={longitud}
-              onChangeText={setLongitud}
-              keyboardType="decimal-pad"
-              style={styles.input}
-            />
-          </View>
+          <TextInput
+            mode="outlined"
+            style={styles.col}
+            label="Latitud"
+            value={latitud}
+            onChangeText={setLatitud}
+            keyboardType="decimal-pad"
+          />
+          <TextInput
+            mode="outlined"
+            style={styles.col}
+            label="Longitud"
+            value={longitud}
+            onChangeText={setLongitud}
+            keyboardType="decimal-pad"
+          />
         </View>
-
-        <View style={styles.buttonsRow}>
-          <Pressable style={styles.btnDark} onPress={cargarPendientes} disabled={cargando}>
-            <Text style={styles.btnDarkText}>Cargar pendientes</Text>
-          </Pressable>
-          <Pressable style={styles.btnLight} onPress={calcularRuta} disabled={cargando}>
-            <Text style={styles.btnLightText}>Calcular ruta</Text>
-          </Pressable>
-        </View>
-
-        <Pressable style={styles.btnGhost} onPress={crearDemo} disabled={cargando}>
-          <Text style={styles.btnGhostText}>Crear solicitud demo</Text>
-        </Pressable>
 
         <View style={styles.kpis}>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiValue}>{resumen.pendientes}</Text>
-            <Text style={styles.kpiLabel}>Pendientes</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiValue}>{resumen.enCamino}</Text>
-            <Text style={styles.kpiLabel}>En camino</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiValue}>{completadasSesion}</Text>
-            <Text style={styles.kpiLabel}>Completadas</Text>
-          </View>
+          <Surface style={styles.kpiCard} elevation={0}>
+            <Text variant="headlineSmall" style={styles.kpiValue}>
+              {resumen.pendientes}
+            </Text>
+            <Text variant="labelLarge">Pendientes</Text>
+          </Surface>
+          <Surface style={styles.kpiCard} elevation={0}>
+            <Text variant="headlineSmall" style={styles.kpiValue}>
+              {resumen.enCamino}
+            </Text>
+            <Text variant="labelLarge">En camino</Text>
+          </Surface>
+          <Surface style={styles.kpiCard} elevation={0}>
+            <Text variant="headlineSmall" style={styles.kpiValue}>
+              {completadasSesion}
+            </Text>
+            <Text variant="labelLarge">Completadas</Text>
+          </Surface>
         </View>
 
         {distanciaKm !== null ? (
-          <Text style={styles.routeInfo}>Distancia sugerida: {distanciaKm.toFixed(2)} km</Text>
+          <List.Item
+            title={`Distancia sugerida: ${distanciaKm.toFixed(2)} km`}
+            left={(props) => <List.Icon {...props} icon="map-search" />}
+          />
         ) : null}
         {rutaIds.length > 0 ? (
-          <Text style={styles.routeInfo}>Orden recomendado: {rutaIds.join(" -> ")}</Text>
+          <HelperText type="info" style={styles.routeText}>
+            Orden recomendado: {rutaIds.join(" -> ")}
+          </HelperText>
         ) : null}
-      </View>
+      </Surface>
 
       <View style={styles.statusRow}>
-        {cargando ? <ActivityIndicator color={colors.accent} /> : null}
-        <Text style={styles.statusText}>{mensaje}</Text>
+        {cargando ? <ActivityIndicator animating size={18} color={theme.colors.primary} /> : null}
+        <Text variant="bodyMedium" style={styles.statusText}>
+          {mensaje}
+        </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
         {solicitudes.length === 0 ? (
-          <Text style={styles.emptyText}>No hay solicitudes en la sesion actual.</Text>
+          <Text variant="bodyLarge">No hay solicitudes en la sesion actual.</Text>
         ) : (
           solicitudes.map((item) => (
             <SolicitudCard
@@ -226,148 +301,102 @@ export function RecicladorScreen() {
           ))
         )}
       </ScrollView>
+
+      <FAB
+        icon="plus"
+        label="Crear solicitud demo"
+        style={styles.fab}
+        onPress={crearDemo}
+        disabled={cargando}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.86)",
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.25)",
-    gap: spacing.sm,
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 78,
+    gap: 12,
   },
-  sectionTitle: {
-    color: colors.textDark,
-    fontSize: 22,
+  banner: {
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  activeSurface: {
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  activeTitle: {
     fontWeight: "700",
+    fontSize: 22,
+    paddingHorizontal: 8,
   },
-  sectionSubtitle: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
+  activeRow: {
+    paddingHorizontal: 0,
+  },
+  quickActions: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
   panel: {
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    padding: spacing.sm,
-    gap: spacing.xs,
-    backgroundColor: "#FFFFFF",
+    padding: 12,
+    gap: 10,
   },
-  label: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.outline,
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 10,
-    color: colors.textDark,
-    fontSize: 14,
-    backgroundColor: "#F9FBFD",
+  panelTitle: {
+    fontWeight: "700",
+    fontSize: 18,
   },
   row: {
     flexDirection: "row",
-    gap: spacing.xs,
+    gap: 8,
   },
   col: {
     flex: 1,
-    gap: 4,
-  },
-  buttonsRow: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  btnDark: {
-    flex: 1,
-    backgroundColor: colors.textDark,
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: "center",
-  },
-  btnDarkText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  btnLight: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: "center",
-  },
-  btnLightText: {
-    color: colors.textDark,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  btnGhost: {
-    marginTop: 2,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: colors.accent,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  btnGhostText: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: "700",
   },
   kpis: {
     flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.xs,
+    gap: 8,
   },
   kpiCard: {
     flex: 1,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    paddingVertical: spacing.xs,
+    paddingVertical: 8,
     alignItems: "center",
-    backgroundColor: "#F9FBFD",
   },
   kpiValue: {
-    color: colors.textDark,
-    fontSize: 20,
     fontWeight: "700",
   },
-  kpiLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    textTransform: "uppercase",
+  routeText: {
+    fontSize: 15,
+    marginTop: -2,
   },
-  routeInfo: {
-    color: colors.textDark,
-    fontSize: 12,
+  buttonTall: {
+    minHeight: 52,
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    minHeight: 20,
+    gap: 8,
+    minHeight: 24,
+    paddingHorizontal: 4,
   },
   statusText: {
-    color: "#E7EEF5",
-    fontSize: 12,
+    fontSize: 16,
     flex: 1,
   },
   list: {
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  emptyText: {
-    color: "#D7E3EE",
-    fontSize: 13,
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 14,
   },
 });

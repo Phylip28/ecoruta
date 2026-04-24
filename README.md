@@ -13,12 +13,15 @@
 **Equipo:** 3 integrantes
 
 ### Problema
+
 Los recuperadores ambientales (recicladores) de Medellín realizan rutas manuales y extensas
 compitiendo contra camiones de basura ordinaria. Los ciudadanos no tienen forma de reportar
 puntos críticos ni de solicitar recolección de material reciclable de forma eficiente.
 
 ### Solución
+
 Plataforma móvil (Expo React Native) que:
+
 - Permite a ciudadanos reportar puntos críticos y solicitar recolección
 - Genera rutas optimizadas para recicladores
 - Muestra mapas de calor para decisiones administrativas
@@ -42,8 +45,9 @@ ecoruta/
 │   │   │   └── estadisticas.py
 │   ├── services/            # Lógica de negocio
 │   │   ├── routing.py       # Algoritmo Nearest Neighbor / Clarke-Wright
-│   │   ├── telegram.py      # Notificaciones Bot Telegram
 │   │   └── carbon.py        # Cálculo huella de carbono
+│   ├── workers/             # Integraciones y notificaciones
+│   │   └── telegram.py      # Notificaciones Bot Telegram
 │   ├── models/              # Modelos SQLAlchemy
 │   │   ├── reporte.py
 │   │   ├── solicitud.py
@@ -59,15 +63,15 @@ ecoruta/
 
 ## 🛠️ Stack Tecnológico
 
-| Capa | Tecnología | Justificación |
-|---|---|---|
-| Mobile | Expo SDK 51 + React Native | Acceso a cámara y GPS sin configuración nativa |
-| Admin Web | React + Leaflet.js | Dashboard con mapa de calor |
-| Backend | FastAPI (Python 3.11) | Rápido de desarrollar, async nativo |
-| Base de datos | PostgreSQL 15 + PostGIS | Queries geoespaciales nativas |
-| Notificaciones | Telegram Bot API | Gratuita, sin aprobación, HTTP simple |
-| Contenedores | Docker + Docker Compose | Deploy local y en AWS |
-| IA (opcional) | Claude API Vision | Clasificación de residuos por foto |
+| Capa           | Tecnología                 | Justificación                                  |
+| -------------- | -------------------------- | ---------------------------------------------- |
+| Mobile         | Expo SDK 51 + React Native | Acceso a cámara y GPS sin configuración nativa |
+| Admin Web      | React + Leaflet.js         | Dashboard con mapa de calor                    |
+| Backend        | FastAPI (Python 3.11)      | Rápido de desarrollar, async nativo            |
+| Base de datos  | PostgreSQL 15 + PostGIS    | Queries geoespaciales nativas                  |
+| Notificaciones | Telegram Bot API           | Gratuita, sin aprobación, HTTP simple          |
+| Contenedores   | Docker + Docker Compose    | Deploy local y en AWS                          |
+| IA (opcional)  | Claude API Vision          | Clasificación de residuos por foto             |
 
 ---
 
@@ -124,18 +128,21 @@ GET    /api/estadisticas/impacto   KG desviados, huella CO2 ahorrada
 ## 📱 Historias de Usuario (MVP)
 
 ### HU-1 — Ciudadano reporta punto crítico
+
 - Abrir app → seleccionar "Reportar Emergencia"
 - Tomar foto con cámara del celular
 - GPS captura coordenadas automáticamente
 - Enviar → pin rojo aparece en mapa
 
 ### HU-2 — Ciudadano solicita recolección
+
 - Abrir app → seleccionar "Solicitar Recolección"
 - Elegir tipo de material: cartón / vidrio / plástico / mixto
 - Ingresar Telegram ID para recibir notificaciones
 - Enviar → pin verde aparece en mapa del reciclador
 
 ### HU-3 — Reciclador ve ruta optimizada
+
 - Reciclador abre app → vista de mapa con pines verdes (solicitudes)
 - Sistema calcula ruta Nearest Neighbor desde su ubicación actual
 - Reciclador acepta punto → estado cambia a "En Camino"
@@ -144,6 +151,7 @@ GET    /api/estadisticas/impacto   KG desviados, huella CO2 ahorrada
 - Ciudadano recibe notificación: "Recolección completada ✅ Desviaste X kg del relleno"
 
 ### HU-4 — Admin ve estadísticas
+
 - Dashboard web con mapa de calor de puntos críticos por barrio/comuna
 - Métricas: total KG desviados, CO2 ahorrado, puntos críticos activos
 - Top 5 comunas con mayor acumulación de residuos
@@ -169,12 +177,12 @@ def calcular_ruta(reciclador_lat, reciclador_lon, solicitudes):
     """
     Algoritmo Nearest Neighbor (greedy) para ruta óptima del reciclador.
     Complejidad: O(n²) — suficiente para n < 50 solicitudes por ruta.
-    
+
     Args:
         reciclador_lat: latitud actual del reciclador
         reciclador_lon: longitud actual del reciclador
         solicitudes: lista de solicitudes pendientes con lat/lon
-    
+
     Returns:
         Lista ordenada de solicitudes (ruta sugerida)
     """
@@ -188,7 +196,7 @@ def calcular_ruta(reciclador_lat, reciclador_lon, solicitudes):
 
 ---
 
-## 📣 Notificaciones Telegram (services/telegram.py)
+## 📣 Notificaciones Telegram (workers/telegram.py)
 
 ```python
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -312,11 +320,31 @@ API_URL=http://localhost:8000
 
 ---
 
+## 🐍 Backend con uv
+
+Desde `backend/`, usar `uv` como flujo principal de Python:
+
+```bash
+# Crear/actualizar entorno y dependencias (incluye dev)
+uv sync --all-groups
+
+# Levantar API local
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Ejecutar tests
+uv run pytest -q
+```
+
+En Docker, el backend instala dependencias desde `pyproject.toml` + `uv.lock` usando `uv sync --frozen` para builds reproducibles.
+
+---
+
 ## 📅 Plan de Desarrollo (1 día)
 
 ### 🌅 Mañana — Cimientos (3-4 horas)
 
 **DevOps (tú):**
+
 - [ ] Crear repo GitHub con estructura de carpetas
 - [ ] Subir `.gitignore`, `.env.example`, `docker-compose.yml`
 - [ ] Levantar PostgreSQL + PostGIS con Docker Compose
@@ -324,6 +352,7 @@ API_URL=http://localhost:8000
 - [ ] Proteger rama `main` — PRs obligatorios
 
 **Dev Backend:**
+
 - [ ] Inicializar FastAPI con estructura de carpetas
 - [ ] Modelos SQLAlchemy + migraciones iniciales
 - [ ] Endpoint `POST /api/reportes/` funcional
@@ -331,6 +360,7 @@ API_URL=http://localhost:8000
 - [ ] Crear bot Telegram con @BotFather
 
 **Dev Mobile:**
+
 - [ ] Inicializar Expo con `npx create-expo-app`
 - [ ] Navegación entre vistas: Ciudadano / Reciclador
 - [ ] Pantalla de reporte: botón cámara + captura GPS
@@ -340,18 +370,21 @@ API_URL=http://localhost:8000
 ### ☀️ Tarde — Features MVP (4-5 horas)
 
 **DevOps:**
+
 - [ ] Inicializar app React admin (`apps/admin/`)
 - [ ] Mapa Leaflet.js base con pines
 - [ ] Plugin `leaflet.heat` para mapa de calor
 - [ ] Consumir `/api/estadisticas/heatmap`
 
 **Dev Backend:**
+
 - [ ] `PATCH /api/solicitudes/{id}/estado` con lógica de estados
-- [ ] `services/telegram.py` — notificación en cada cambio de estado
+- [ ] `workers/telegram.py` — notificación en cada cambio de estado
 - [ ] `services/routing.py` — algoritmo Nearest Neighbor
 - [ ] `GET /api/rutas/{reciclador_id}` funcional
 
 **Dev Mobile:**
+
 - [ ] Pantalla Mapa Reciclador con pines (react-native-maps)
 - [ ] Botones de cambio de estado en cada pin
 - [ ] Colores por estado: 🟡 Pendiente | 🔵 En Camino | ✅ Completado
@@ -361,6 +394,7 @@ API_URL=http://localhost:8000
 ### 🌙 Noche — Cierre y Pitch (2-3 horas)
 
 **Todo el equipo:**
+
 - [ ] Prueba end-to-end completa (ciudadano → reciclador → admin)
 - [ ] Contador de KG desviados visible en mobile y admin
 - [ ] `services/carbon.py` — cálculo CO2 conectado al flujo
@@ -371,12 +405,12 @@ API_URL=http://localhost:8000
 
 ## 🎤 Estructura del Pitch (15 min)
 
-| Tiempo | Sección | Contenido |
-|---|---|---|
-| 3 min | Problema | Mostrar foto real de punto crítico en Medellín. Enunciar el problema humano del reciclador. |
-| 7 min | Demo en vivo | HU-1 reporte con foto → HU-2 solicitud → HU-3 reciclador acepta y completa → notificación Telegram llega en vivo → HU-4 admin ve mapa de calor |
-| 3 min | Arquitectura | Monorepo modular, PostGIS, algoritmo de rutas, IA con Claude Vision |
-| 2 min | Próximos pasos | Clarke-Wright multi-reciclador, predicción de puntos críticos con ML, integración Emvarias |
+| Tiempo | Sección        | Contenido                                                                                                                                      |
+| ------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3 min  | Problema       | Mostrar foto real de punto crítico en Medellín. Enunciar el problema humano del reciclador.                                                    |
+| 7 min  | Demo en vivo   | HU-1 reporte con foto → HU-2 solicitud → HU-3 reciclador acepta y completa → notificación Telegram llega en vivo → HU-4 admin ve mapa de calor |
+| 3 min  | Arquitectura   | Monorepo modular, PostGIS, algoritmo de rutas, IA con Claude Vision                                                                            |
+| 2 min  | Próximos pasos | Clarke-Wright multi-reciclador, predicción de puntos críticos con ML, integración Emvarias                                                     |
 
 ---
 
@@ -393,11 +427,11 @@ API_URL=http://localhost:8000
 
 ## 👥 Equipo
 
-| Rol | Responsabilidad |
-|---|---|
+| Rol                    | Responsabilidad                             |
+| ---------------------- | ------------------------------------------- |
 | DevOps / Líder técnico | Repo, Docker, Admin dashboard, coordinación |
-| Dev Backend | FastAPI, BD, algoritmo de rutas, Telegram |
-| Dev Mobile | Expo, vistas ciudadano y reciclador, mapas |
+| Dev Backend            | FastAPI, BD, algoritmo de rutas, Telegram   |
+| Dev Mobile             | Expo, vistas ciudadano y reciclador, mapas  |
 
 ---
 

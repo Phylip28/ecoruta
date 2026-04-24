@@ -4,7 +4,7 @@ from api.dependencies import require_roles
 from api.schemas import EstadoUpdate, ReporteResponse, SolicitudCreate
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from services.store import store
-from services.telegram import notificar_ciudadano
+from workers.telegram import notificar_cambio_estado
 
 router = APIRouter()
 
@@ -75,15 +75,10 @@ async def actualizar_estado(
         )
 
     if updated.get("ciudadano_telegram_id"):
-        if payload.estado == "en_camino":
-            await notificar_ciudadano(
-                updated["ciudadano_telegram_id"],
-                "Tu reciclador esta en camino. Gracias por reciclar.",
-            )
-        elif payload.estado == "completado":
-            await notificar_ciudadano(
-                updated["ciudadano_telegram_id"],
-                f"Recoleccion completada. Desviaste {updated['kg_estimados']} kg del relleno.",
-            )
+        await notificar_cambio_estado(
+            telegram_id=updated["ciudadano_telegram_id"],
+            estado=payload.estado,
+            kg_estimados=float(updated["kg_estimados"]),
+        )
 
     return updated

@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Button, Card, Text, TextInput } from "react-native-paper";
 
-import { crearSolicitud } from "../../../core/api/client";
+import { crearSolicitud, getHistorialCiudadano, type HistorialItem } from "../../../core/api/client";
 import { env } from "../../../config/env";
 import {
   BorderRadius,
@@ -20,7 +20,6 @@ import { CiudadanoHeroCard } from "../components/CiudadanoHeroCard";
 import { HistorialCiudadano } from "../components/HistorialCiudadano";
 import { MaterialSelectorGrid } from "../components/MaterialSelectorGrid";
 import { ReporteConFoto } from "../components/ReporteConFoto";
-import { historialCiudadanoMock } from "../mock/historialMock";
 
 type FeedbackTipo = "exito" | "error" | "info" | "advertencia";
 
@@ -40,15 +39,31 @@ export function CiudadanoHomeScreen({ onFeedback }: CiudadanoHomeScreenProps) {
   const [material, setMaterial] = useState<Material>("mixto");
   const [kg, setKg] = useState("2");
   const [descripcion, setDescripcion] = useState("");
-  const [telegramId, setTelegramId] = useState(String(env.mobile.demoTelegramId));
   const [cargando, setCargando] = useState(false);
+  const [historialItems, setHistorialItems] = useState<HistorialItem[]>([]);
+  const [historialLoading, setHistorialLoading] = useState(false);
+
+  const fetchHistorial = useCallback(async () => {
+    setHistorialLoading(true);
+    try {
+      const items = await getHistorialCiudadano();
+      setHistorialItems(items);
+    } catch (err) {
+      onFeedback(
+        err instanceof Error ? err.message : "No pudimos cargar el historial.",
+        "error",
+      );
+    } finally {
+      setHistorialLoading(false);
+    }
+  }, [onFeedback]);
+
+  useEffect(() => {
+    if (tab === "historial") void fetchHistorial();
+  }, [tab, fetchHistorial]);
 
   async function enviarSolicitud() {
-    const tid = Number(telegramId);
-    if (!Number.isFinite(tid) || tid <= 0) {
-      onFeedback("Ingresa un Telegram ID válido.", "error");
-      return;
-    }
+    const tid = env.mobile.demoTelegramId;
     const kgNum = Number(kg.replace(",", "."));
     if (!Number.isFinite(kgNum) || kgNum < 0) {
       onFeedback("Indica kg estimados válidos (ej. 1.5).", "error");
@@ -106,13 +121,11 @@ export function CiudadanoHomeScreen({ onFeedback }: CiudadanoHomeScreenProps) {
       {/* ── Historial ── */}
       {tab === "historial" ? (
         <View style={styles.historialWrapper}>
-          <View style={styles.historialHeader}>
-            <MaterialCommunityIcons name="clock-outline" size={16} color={Colors.gray500} />
-            <Text style={[Typography.bodySm, { color: Colors.gray500 }]}>
-              Mostrando datos demo (FE-10)
-            </Text>
-          </View>
-          <HistorialCiudadano items={historialCiudadanoMock} />
+          <HistorialCiudadano
+            items={historialItems}
+            loading={historialLoading}
+            onRefresh={() => void fetchHistorial()}
+          />
         </View>
       ) : (
         /* ── Acciones ── */
@@ -168,24 +181,7 @@ export function CiudadanoHomeScreen({ onFeedback }: CiudadanoHomeScreenProps) {
                 />
               </View>
 
-              {/* Telegram */}
-              <View style={styles.fieldGroup}>
-                <View style={styles.fieldLabelRow}>
-                  <MaterialCommunityIcons name="send" size={18} color={Colors.teal} />
-                  <Text style={styles.fieldLabel}>Notificación vía Telegram</Text>
-                </View>
-                <TextInput
-                  mode="outlined"
-                  label="Tu Telegram ID"
-                  keyboardType="number-pad"
-                  value={telegramId}
-                  onChangeText={setTelegramId}
-                  style={styles.input}
-                  outlineStyle={{ borderRadius: BorderRadius.md }}
-                />
-              </View>
-
-              {/* Descripción */}
+              {/* Kg estimados */}
               <TextInput
                 mode="outlined"
                 label="Descripción opcional"
@@ -268,16 +264,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s4,
     paddingTop: Spacing.s3,
   },
-  historialHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.s1,
-    marginBottom: Spacing.s3,
-    backgroundColor: Colors.gray100,
-    padding: Spacing.s2,
-    borderRadius: BorderRadius.md,
-  },
-
   // ── Scroll ──
   scroll: {
     flex: 1,

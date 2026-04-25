@@ -3,7 +3,7 @@ import { Image, Pressable, StyleSheet, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import { ActivityIndicator, Button, Surface, Text, TextInput } from "react-native-paper";
+import { ActivityIndicator, Button, Card, Text, TextInput } from "react-native-paper";
 
 import { crearReporte } from "../../../core/api/client";
 import { env } from "../../../config/env";
@@ -122,7 +122,7 @@ export function ReporteConFoto({ onFeedback }: ReporteConFotoProps) {
   };
 
   return (
-    <Surface style={[styles.card, Shadows.md]} elevation={0}>
+    <Card mode="elevated" style={[styles.card, Shadows.md]}>
       {/* ── Header ── */}
       <View style={styles.cardHeader}>
         <View style={[styles.headerIcon, { backgroundColor: `${Colors.danger}15` }]}>
@@ -130,7 +130,6 @@ export function ReporteConFoto({ onFeedback }: ReporteConFotoProps) {
         </View>
         <View>
           <Text style={[Typography.heading3, { color: Colors.navy }]}>Reportar con evidencia</Text>
-          <Text style={[Typography.bodySm, { color: Colors.gray500 }]}>Foto + ubicación + tipo</Text>
         </View>
       </View>
 
@@ -282,34 +281,22 @@ export function ReporteConFoto({ onFeedback }: ReporteConFotoProps) {
         </View>
 
         {/* ── CTA ── */}
-        <Pressable
-          onPress={() => void enviar()}
+        <Button
+          mode="contained"
+          icon={tipoConfig[tipo].icon}
+          buttonColor={tipoConfig[tipo].color}
+          textColor={Colors.white}
+          contentStyle={styles.ctaContent}
+          style={styles.ctaButton}
+          loading={enviando}
           disabled={enviando}
-          style={({ pressed }) => [
-            styles.cta,
-            { backgroundColor: tipoConfig[tipo].color },
-            enviando && { opacity: 0.6 },
-            pressed && { opacity: 0.85 },
-          ]}
-          accessibilityRole="button"
+          onPress={() => void enviar()}
           accessibilityLabel="Enviar reporte"
-          accessibilityState={{ disabled: enviando }}
         >
-          {enviando ? (
-            <ActivityIndicator size="small" color={Colors.white} />
-          ) : (
-            <>
-              <MaterialCommunityIcons
-                name={tipoConfig[tipo].icon as any}
-                size={22}
-                color={Colors.white}
-              />
-              <Text style={styles.ctaLabel}>Enviar reporte</Text>
-            </>
-          )}
-        </Pressable>
+          Enviar reporte
+        </Button>
       </View>
-    </Surface>
+    </Card>
   );
 }
 
@@ -323,11 +310,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.s3,
+    backgroundColor: `${Colors.danger}08`,
+    borderBottomWidth: 1,
+    borderBottomColor: `${Colors.danger}18`,
     paddingHorizontal: Spacing.s4,
     paddingVertical: Spacing.s3,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.gray200,
-    backgroundColor: Colors.gray50,
   },
   headerIcon: {
     width: 40,
@@ -482,17 +469,11 @@ const styles = StyleSheet.create({
   },
 
   // ── CTA ──
-  cta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.s2,
+  ctaContent: {
     minHeight: touchTarget.ctaCiudadano,
-    borderRadius: BorderRadius.lg,
   },
-  ctaLabel: {
-    fontFamily: FontFamily.dmSans700,
-    fontSize: 17,
-    color: Colors.white,
+  ctaButton: {
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.s1,
   },
 });

@@ -63,3 +63,14 @@ class ImpactoResponse(BaseModel):
     kg_desviados_total: float
     co2_ahorrado_total_kg: float
     por_material: dict[str, float]
+
+
+class HistorialCiudadanoItemResponse(BaseModel):
+    id: str
+    tipo: TipoReporte
+    estado: EstadoSolicitud
+    fecha: datetime
+    descripcion: str | None = None
+    material: Material | None = None
+    reciclador_nombre: str | None = None
+    miniatura_uri: str | None = None

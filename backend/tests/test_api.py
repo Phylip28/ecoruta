@@ -66,3 +66,43 @@ def test_solicitud_flow_y_impacto() -> None:
 def test_forbidden_access_to_admin_route() -> None:
     response = client.get("/api/estadisticas/impacto", headers=CIUDADANO_HEADERS)
     assert response.status_code == 403
+
+
+def test_historial_ciudadano() -> None:
+    # Create a reporte and a solicitud as ciudadano
+    client.post(
+        "/api/reportes/",
+        headers=CIUDADANO_HEADERS,
+        json={"tipo": "emergencia", "latitud": 6.2442, "longitud": -75.5812},
+    )
+    client.post(
+        "/api/solicitudes/",
+        headers=CIUDADANO_HEADERS,
+        json={
+            "latitud": 6.2442,
+            "longitud": -75.5812,
+            "material": "carton",
+            "ciudadano_telegram_id": 123456789,
+            "kg_estimados": 3,
+        },
+    )
+
+    response = client.get("/api/ciudadano/historial", headers=CIUDADANO_HEADERS)
+    assert response.status_code == 200
+    items = response.json()
+    assert len(items) == 2
+    # All items must have required fields
+    for item in items:
+        assert "id" in item
+        assert isinstance(item["id"], str)
+        assert item["tipo"] in ("emergencia", "solicitud")
+        assert item["estado"] in ("pendiente", "en_camino", "completado")
+        assert "fecha" in item
+
+    # Admin may also access the historial
+    admin_response = client.get("/api/ciudadano/historial", headers=ADMIN_HEADERS)
+    assert admin_response.status_code == 200
+
+    # Reciclador must be forbidden
+    forbidden = client.get("/api/ciudadano/historial", headers=RECICLADOR_HEADERS)
+    assert forbidden.status_code == 403

@@ -43,7 +43,7 @@ async def listar_pendientes(
     return [
         s
         for s in store.list()
-        if s["tipo"] == "solicitud" and s["estado"] == "pendiente"
+        if s["estado"] == "pendiente"
     ]
 
 

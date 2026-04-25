@@ -12,7 +12,7 @@ import {
   tableEstadoBadges,
   tableTypeBadges,
 } from "../../../design-system";
-import type { HistorialCiudadanoItem } from "../mock/historialMock";
+import type { HistorialItem } from "../../../core/api/client";
 
 function formatFecha(iso: string): string {
   try {
@@ -27,7 +27,7 @@ const ESTADO_ICONS: Record<string, string> = {
 };
 
 type HistorialCiudadanoProps = {
-  items: HistorialCiudadanoItem[];
+  items: HistorialItem[];
   loading?: boolean;
   onRefresh?: () => void;
 };
@@ -119,15 +119,18 @@ export function HistorialCiudadano({ items, loading = false, onRefresh }: Histor
                 {/* Reciclador */}
                 <View style={styles.recicladorRow}>
                   <MaterialCommunityIcons
-                    name={item.recicladorNombre ? "account-check-outline" : "account-clock-outline"}
+                    name={item.estado === "pendiente" ? "account-clock-outline" : item.estado === "en_camino" ? "account-check-outline" : "check-circle-outline"}
                     size={13}
-                    color={item.recicladorNombre ? Colors.teal : Colors.gray500}
+                    color={item.estado !== "pendiente" ? Colors.teal : Colors.gray500}
                   />
-                  <Text style={[
-                    styles.recicladorText,
-                    { color: item.recicladorNombre ? Colors.teal : Colors.gray500 },
+                  <Text style={[styles.recicladorText,
+                    { color: item.estado !== "pendiente" ? Colors.teal : Colors.gray500 },
                   ]}>
-                    {item.recicladorNombre ?? "Pendiente de asignación"}
+                    {item.estado === "pendiente"
+                      ? "Pendiente de asignación"
+                      : item.estado === "en_camino"
+                        ? "Reciclador asignado"
+                        : "Recogido"}
                   </Text>
                 </View>
               </View>

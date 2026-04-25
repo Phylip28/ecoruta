@@ -70,8 +70,10 @@ type ApiHistorialItem = {
   fecha: string;
   descripcion: string | null;
   material: "carton" | "vidrio" | "plastico" | "mixto" | null;
+  reciclador_id: number | null;
   reciclador_nombre: string | null;
   miniatura_uri: string | null;
+  kg_estimados: number;
 };
 
 export type HistorialItem = {
@@ -81,8 +83,10 @@ export type HistorialItem = {
   fecha: string;
   descripcion: string | null;
   material: "carton" | "vidrio" | "plastico" | "mixto" | null;
+  recicladorId: number | null;
   recicladorNombre: string | null;
   miniaturaUri: string | null;
+  kgEstimados: number;
 };
 
 export async function getHistorialCiudadano(): Promise<HistorialItem[]> {
@@ -98,7 +102,9 @@ export async function getHistorialCiudadano(): Promise<HistorialItem[]> {
     fecha: item.fecha,
     descripcion: item.descripcion,
     material: item.material,
+    recicladorId: item.reciclador_id,
     recicladorNombre: item.reciclador_nombre,
     miniaturaUri: item.miniatura_uri,
+    kgEstimados: item.kg_estimados ?? 0,
   }));
 }

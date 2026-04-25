@@ -19,7 +19,7 @@ async def obtener_ruta(
     pendientes = [
         s
         for s in store.list()
-        if s["tipo"] == "solicitud" and s["estado"] == "pendiente"
+        if s["estado"] == "pendiente"
     ]
     
     orden, distancia, tiempo = await calcular_ruta_avanzada(

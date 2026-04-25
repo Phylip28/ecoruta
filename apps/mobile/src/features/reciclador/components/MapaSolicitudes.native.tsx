@@ -2,13 +2,12 @@ import { useMemo } from "react";
 import MapView, { Marker, Polyline, type LatLng } from "react-native-maps";
 
 import { Colors } from "../../../design-system";
-
 import type { MapaSolicitudesProps } from "./mapaSolicitudesProps";
 
-function pinColorForSolicitud(tipo: "emergencia" | "solicitud", estado: string): "red" | "green" | "purple" {
-  if (tipo === "emergencia") return "red";
-  if (estado === "en_camino") return "purple";
-  return "green";
+function pinColorForSolicitud(tipo: "emergencia" | "solicitud", estado: string): string {
+  if (tipo === "emergencia") return "#EF4444";
+  if (estado === "en_camino") return "#3B82F6";
+  return "#22C55E";
 }
 
 export function MapaSolicitudes({
@@ -55,14 +54,14 @@ export function MapaSolicitudes({
 
   return (
     <MapView
-      style={{ height: 220, width: "100%", borderRadius: 16 }}
+      style={{ flex: 1, width: "100%" }}
       initialRegion={initialRegion}
       accessibilityLabel="Mapa de solicitudes pendientes y en camino"
     >
       <Marker
         coordinate={{ latitude: recicladorLat, longitude: recicladorLng }}
         title="Tu posición"
-        pinColor="purple"
+        pinColor="#9CA3AF"
         accessibilityLabel="Marcador de posición del reciclador"
       />
       {solicitudes.map((s) => (

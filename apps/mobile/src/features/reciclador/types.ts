@@ -21,6 +21,7 @@ export type RutaResponse = {
   reciclador_id: number;
   orden: Solicitud[];
   distancia_total_km: number;
+  tiempo_estimado_min?: number;
 };
 
 export type CrearSolicitudPayload = {

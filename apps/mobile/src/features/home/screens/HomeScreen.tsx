@@ -1,264 +1,179 @@
 import { useEffect, useMemo, useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
-import {
-  Appbar,
-  Badge,
-  Button,
-  Card,
-  Chip,
-  FAB,
-  SegmentedButtons,
-  Snackbar,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { SafeAreaView, StyleSheet, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Appbar, Snackbar, Text } from "react-native-paper";
 
-import { crearReporte, crearSolicitud, getHealth } from "../../../core/api/client";
-import { env } from "../../../config/env";
+import { EcoLogo } from "../../../components/EcoLogo";
+import { getHealth } from "../../../core/api/client";
+import {
+  BorderRadius,
+  Colors,
+  FontFamily,
+  Shadows,
+  Spacing,
+  Typography,
+} from "../../../design-system";
+import { DesignSystemScreen } from "../../../design-system/DesignSystemScreen";
+import type { UserRole } from "../../auth/context/AuthContext";
+import { CiudadanoHomeScreen } from "../../ciudadano/screens/CiudadanoHomeScreen";
 import { RecicladorScreen } from "../../reciclador/screens/RecicladorScreen";
 
-type VistaSesion = "ciudadano" | "reciclador";
-type Material = "carton" | "vidrio" | "plastico" | "mixto";
+type HomeScreenProps = {
+  role: UserRole;
+  onLogout: () => void;
+};
 
-export function HomeScreen() {
-  const theme = useTheme();
-  const [backendStatus, setBackendStatus] = useState("verificando");
-  const [vista, setVista] = useState<VistaSesion>("ciudadano");
-  const [materialSeleccionado, setMaterialSeleccionado] = useState<Material>("mixto");
-  const [descripcionReporte, setDescripcionReporte] = useState("");
-  const [descripcionSolicitud, setDescripcionSolicitud] = useState("");
-  const [telegramId, setTelegramId] = useState(String(env.mobile.demoTelegramId));
-  const [cargandoReporte, setCargandoReporte] = useState(false);
-  const [cargandoSolicitud, setCargandoSolicitud] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ visible: boolean; mensaje: string; error: boolean }>({
-    visible: false,
-    mensaje: "",
-    error: false,
-  });
+type SnackState = {
+  visible: boolean;
+  mensaje: string;
+  tipo: "exito" | "error" | "info" | "advertencia";
+};
+
+const ROLE_META: Record<UserRole, { label: string; icon: string; accent: string; bg: string }> = {
+  ciudadano: { label: "Ciudadano", icon: "account-circle-outline", accent: Colors.lime, bg: `${Colors.lime}20` },
+  reciclador: { label: "Reciclador", icon: "recycle", accent: Colors.teal, bg: `${Colors.teal}18` },
+};
+
+type BackendStatus = "ok" | "verificando" | "error";
+
+export function HomeScreen({ role, onLogout }: HomeScreenProps) {
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>("verificando");
+  const [snackbar, setSnackbar] = useState<SnackState>({ visible: false, mensaje: "", tipo: "info" });
+  const [mostrarDesignSystem, setMostrarDesignSystem] = useState(false);
+
+  const meta = ROLE_META[role];
 
   useEffect(() => {
     getHealth()
-      .then((data) => setBackendStatus(data.status))
-      .catch(() => setBackendStatus("sin conexion"));
+      .then((data) => setBackendStatus(data.status === "ok" ? "ok" : "error"))
+      .catch(() => setBackendStatus("error"));
   }, []);
 
-  const statusSeverity = useMemo(() => {
-    if (backendStatus === "ok") return "ok";
-    if (backendStatus === "verificando") return "loading";
-    return "error";
+  const statusConfig = useMemo(() => {
+    if (backendStatus === "ok") return { color: Colors.lime, label: "Conectado" };
+    if (backendStatus === "verificando") return { color: Colors.yellow, label: "Verificando" };
+    return { color: Colors.danger, label: "Sin conexión" };
   }, [backendStatus]);
 
-  function mostrarMensaje(mensaje: string, error = false) {
-    setSnackbar({ visible: true, mensaje, error });
+  function mostrarMensaje(mensaje: string, tipo: SnackState["tipo"] = "info") {
+    setSnackbar({ visible: true, mensaje, tipo });
   }
 
-  async function enviarReporte() {
-    setCargandoReporte(true);
-    try {
-      const data = await crearReporte({
-        tipo: "emergencia",
-        latitud: env.mobile.latitudInicial,
-        longitud: env.mobile.longitudInicial,
-        descripcion: descripcionReporte || undefined,
-      });
-      mostrarMensaje(`Reporte #${data.id} enviado.`);
-      setDescripcionReporte("");
-    } catch (err) {
-      mostrarMensaje(err instanceof Error ? err.message : "Error al enviar reporte.", true);
-    } finally {
-      setCargandoReporte(false);
-    }
-  }
+  const snackbarBg =
+    snackbar.tipo === "exito" ? Colors.teal
+    : snackbar.tipo === "error" ? Colors.danger
+    : snackbar.tipo === "advertencia" ? Colors.yellow
+    : Colors.navy;
 
-  async function enviarSolicitud() {
-    const tid = Number(telegramId);
-    if (!Number.isFinite(tid) || tid <= 0) {
-      mostrarMensaje("Ingresa un Telegram ID valido.", true);
-      return;
-    }
-    setCargandoSolicitud(true);
-    try {
-      const data = await crearSolicitud({
-        latitud: env.mobile.latitudInicial,
-        longitud: env.mobile.longitudInicial,
-        material: materialSeleccionado,
-        ciudadano_telegram_id: tid,
-        descripcion: descripcionSolicitud || undefined,
-        kg_estimados: 0,
-      });
-      mostrarMensaje(`Solicitud #${data.id} enviada. Te avisamos por Telegram.`);
-      setDescripcionSolicitud("");
-    } catch (err) {
-      mostrarMensaje(err instanceof Error ? err.message : "Error al enviar solicitud.", true);
-    } finally {
-      setCargandoSolicitud(false);
-    }
+  const snackbarTextColor = snackbar.tipo === "advertencia" ? Colors.navy : Colors.white;
+
+  if (mostrarDesignSystem) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <DesignSystemScreen onClose={() => setMostrarDesignSystem(false)} />
+      </SafeAreaView>
+    );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Appbar.Header mode="small" elevated>
-        <Appbar.Content title="EcoRuta" />
-        <Badge
-          style={[
-            styles.statusBadge,
-            statusSeverity === "ok"
-              ? { backgroundColor: theme.colors.primary }
-              : statusSeverity === "loading"
-                ? { backgroundColor: theme.colors.tertiary }
-                : { backgroundColor: theme.colors.error },
-          ]}
-        >
-          {backendStatus}
-        </Badge>
-      </Appbar.Header>
+    <SafeAreaView style={styles.root}>
+      {/* ── App Bar ── */}
+      <View style={styles.header}>
+        {/* Logo */}
+        <EcoLogo height={36} width={108} />
 
-      <View style={styles.switchContainer}>
-        <SegmentedButtons
-          value={vista}
-          onValueChange={(value) => setVista(value as VistaSesion)}
-          density="regular"
-          buttons={[
-            { value: "ciudadano", label: "Ciudadano", icon: "account" },
-            { value: "reciclador", label: "Reciclador", icon: "bike" },
-          ]}
+        {/* Spacer */}
+        <View style={{ flex: 1 }} />
+
+        {/* Role pill */}
+        <View style={[styles.rolePill, { backgroundColor: meta.bg }]}>
+          <MaterialCommunityIcons name={meta.icon as any} size={14} color={meta.accent} />
+          <Text style={[styles.rolePillText, { color: meta.accent }]}>{meta.label}</Text>
+        </View>
+
+        {/* Status dot */}
+        <View style={styles.statusDot}>
+          <View style={[styles.dot, { backgroundColor: statusConfig.color }]} />
+        </View>
+
+        {/* Dev: Design system */}
+        <Appbar.Action
+          icon="palette-outline"
+          color={Colors.gray300}
+          size={19}
+          onPress={() => setMostrarDesignSystem(true)}
+          accessibilityLabel="Design system"
+        />
+
+        {/* Logout */}
+        <Appbar.Action
+          icon="logout"
+          color={Colors.gray700}
+          size={21}
+          onPress={onLogout}
+          accessibilityLabel="Cerrar sesión"
         />
       </View>
 
-      {vista === "ciudadano" ? (
-        <>
-          <ScrollView contentContainerStyle={styles.container}>
-            <Card mode="elevated" style={styles.card}>
-              <Card.Title title="Reportar punto critico" />
-              <Card.Content style={styles.cardContent}>
-                <TextInput
-                  mode="outlined"
-                  label="Descripcion"
-                  value={descripcionReporte}
-                  onChangeText={setDescripcionReporte}
-                  multiline
-                  numberOfLines={3}
-                />
-                <Button
-                  mode="contained"
-                  icon="map-marker"
-                  contentStyle={styles.buttonTall}
-                  loading={cargandoReporte}
-                  disabled={cargandoReporte}
-                  onPress={() => void enviarReporte()}
-                >
-                  Enviar reporte
-                </Button>
-              </Card.Content>
-            </Card>
-
-            <Card mode="elevated" style={styles.card}>
-              <Card.Title title="Solicitar recoleccion" />
-              <Card.Content style={styles.cardContent}>
-                <Text variant="labelLarge">Material</Text>
-                <View style={styles.chipRow}>
-                  {(["carton", "vidrio", "plastico", "mixto"] as Material[]).map((material) => (
-                    <Chip
-                      key={material}
-                      selected={materialSeleccionado === material}
-                      showSelectedOverlay
-                      onPress={() => setMaterialSeleccionado(material)}
-                      style={styles.chip}
-                    >
-                      {material}
-                    </Chip>
-                  ))}
-                </View>
-
-                <TextInput
-                  mode="outlined"
-                  label="Telegram ID"
-                  keyboardType="number-pad"
-                  value={telegramId}
-                  onChangeText={setTelegramId}
-                />
-                <TextInput
-                  mode="outlined"
-                  label="Descripcion (opcional)"
-                  value={descripcionSolicitud}
-                  onChangeText={setDescripcionSolicitud}
-                />
-                <Button
-                  mode="contained"
-                  icon="send"
-                  contentStyle={styles.buttonTall}
-                  loading={cargandoSolicitud}
-                  disabled={cargandoSolicitud}
-                  onPress={() => void enviarSolicitud()}
-                >
-                  Solicitar recoleccion
-                </Button>
-              </Card.Content>
-            </Card>
-          </ScrollView>
-
-          <FAB icon="bike" style={styles.fab} onPress={() => setVista("reciclador")} />
-        </>
+      {/* ── Content ── */}
+      {role === "ciudadano" ? (
+        <CiudadanoHomeScreen onFeedback={mostrarMensaje} />
       ) : (
-        <RecicladorScreen />
+        <RecicladorScreen onFeedback={mostrarMensaje} />
       )}
 
+      {/* ── Snackbar ── */}
       <Snackbar
         visible={snackbar.visible}
         onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
-        duration={3500}
-        style={snackbar.error ? { backgroundColor: theme.colors.errorContainer } : undefined}
+        duration={4000}
+        style={{ backgroundColor: snackbarBg }}
+        elevation={4}
       >
-        <Text style={snackbar.error ? { color: theme.colors.onErrorContainer } : undefined}>
-          {snackbar.mensaje}
-        </Text>
+        <Text style={[Typography.bodyMd, { color: snackbarTextColor }]}>{snackbar.mensaje}</Text>
       </Snackbar>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
-    backgroundColor: "#F4F8F3",
+    backgroundColor: Colors.white,
   },
-  switchContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 6,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.s4,
+    paddingVertical: Spacing.s2,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray200,
+    minHeight: 52,
+    ...Shadows.sm,
   },
-  container: {
-    paddingHorizontal: 16,
-    paddingBottom: 90,
-    gap: 14,
+  rolePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: Spacing.s2,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    marginRight: Spacing.s1,
   },
-  statusBadge: {
-    marginRight: 12,
-    color: "#FFFFFF",
+  rolePillText: {
+    fontFamily: FontFamily.dmSans700,
     fontSize: 12,
   },
-  card: {
-    borderRadius: 18,
+  statusDot: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  cardContent: {
-    gap: 12,
-    paddingBottom: 8,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    borderRadius: 12,
-  },
-  buttonTall: {
-    minHeight: 52,
-  },
-  fab: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });

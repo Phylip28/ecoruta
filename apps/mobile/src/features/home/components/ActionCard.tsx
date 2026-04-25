@@ -1,6 +1,12 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "../../../theme/tokens";
+import {
+  BorderRadius,
+  Colors,
+  Shadows,
+  Spacing,
+  Typography,
+} from "../../../design-system";
 
 type ActionCardProps = {
   title: string;
@@ -9,21 +15,27 @@ type ActionCardProps = {
   onPress?: () => void;
 };
 
-export function ActionCard({
-  title,
-  description,
-  tone,
-  onPress,
-}: ActionCardProps) {
+export function ActionCard({ title, description, tone, onPress }: ActionCardProps) {
   const stripeColor =
-    tone === "danger" ? colors.danger : tone === "warning" ? colors.warning : colors.accent;
+    tone === "danger"
+      ? Colors.danger
+      : tone === "warning"
+        ? Colors.warning
+        : Colors.teal;
 
   return (
-    <Pressable onPress={onPress} style={styles.card}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        Shadows.md,
+        pressed ? { opacity: 0.85, transform: [{ scale: 0.97 }] } : null,
+      ]}
+    >
       <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
       <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.description}>{description}</Text>
+        <Text style={[Typography.heading3, { color: Colors.navy }]}>{title}</Text>
+        <Text style={[Typography.bodySm, { color: Colors.gray700 }]}>{description}</Text>
       </View>
     </Pressable>
   );
@@ -31,34 +43,19 @@ export function ActionCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
-    backgroundColor: colors.card,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
     overflow: "hidden",
     flexDirection: "row",
-    marginBottom: spacing.md,
-    shadowColor: "#000",
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    marginBottom: Spacing.s4,
   },
   stripe: {
-    width: 8,
+    width: 4,
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    gap: spacing.xs,
-  },
-  title: {
-    color: colors.textDark,
-    fontSize: 17,
-    fontWeight: "700",
-  },
-  description: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
+    paddingHorizontal: Spacing.s6,
+    paddingVertical: Spacing.s6,
+    gap: Spacing.s2,
   },
 });

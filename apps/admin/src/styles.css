@@ -4,14 +4,48 @@
 
 :root {
   color-scheme: light;
-  font-family: "Segoe UI", "Roboto", "Noto Sans", sans-serif;
+  --eco-shadow-sm: 0 1px 3px rgba(4, 41, 64, 0.08), 0 1px 2px rgba(4, 41, 64, 0.06);
+  --eco-shadow-md: 0 4px 6px rgba(4, 41, 64, 0.07), 0 2px 4px rgba(4, 41, 64, 0.06);
+  --eco-shadow-lg: 0 10px 15px rgba(4, 41, 64, 0.1), 0 4px 6px rgba(4, 41, 64, 0.05);
+  --eco-shadow-xl: 0 20px 25px rgba(4, 41, 64, 0.1), 0 10px 10px rgba(4, 41, 64, 0.04);
+  --eco-opacity-disabled: 0.38;
+  --eco-opacity-overlay: 0.72;
+  --eco-opacity-hint: 0.6;
+  --eco-opacity-pressed: 0.85;
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
+@layer base {
+  html {
+    font-family: "DM Sans", system-ui, sans-serif;
+    @apply text-eco-gray-900 antialiased;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    @apply bg-eco-gray-50 text-eco-gray-900;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "Sora", system-ui, sans-serif;
+  }
 }
 
 * {
   box-sizing: border-box;
+}
+
+@layer utilities {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }

@@ -2,9 +2,36 @@
   "expo": {
     "name": "EcoRuta",
     "slug": "ecoruta-mobile",
+    "web": {
+      "bundler": "metro"
+    },
     "version": "0.1.0",
     "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"]
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "EcoRuta usa tu ubicación para georreferenciar reportes y rutas del reciclador."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "EcoRuta accede a tus fotos para adjuntar evidencia al reporte.",
+          "cameraPermission": "EcoRuta usa la cámara para documentar el punto de residuos."
+        }
+      ]
+    ]
   }
 }

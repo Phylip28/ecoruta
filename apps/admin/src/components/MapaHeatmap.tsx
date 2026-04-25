@@ -3,6 +3,7 @@ import L from "leaflet";
 import { useEffect, useMemo } from "react";
 import { CircleMarker, MapContainer, TileLayer, Tooltip } from "react-leaflet";
 
+import { heatColorByWeight } from "../design-system";
 import type { HeatmapPoint } from "../core/api";
 
 // Fix Leaflet's broken default icon path when bundled with Vite
@@ -19,17 +20,8 @@ type Props = {
 };
 
 const MEDELLIN_CENTER: [number, number] = [6.2442, -75.5812];
-const MAX_PESO = 10;
-
-function pesoAColor(peso: number): string {
-  const t = Math.min(peso / MAX_PESO, 1);
-  if (t < 0.4) return "#2E7D32"; // eco-fern — bajo
-  if (t < 0.7) return "#F59E0B"; // eco-sun — medio
-  return "#B91C1C";              // eco-ember — alto
-}
 
 export function MapaHeatmap({ points }: Props) {
-  // Recompute center only when points change
   const center = useMemo<[number, number]>(() => {
     if (points.length === 0) return MEDELLIN_CENTER;
     const latAvg = points.reduce((acc, p) => acc + p.latitud, 0) / points.length;
@@ -37,19 +29,18 @@ export function MapaHeatmap({ points }: Props) {
     return [latAvg, lonAvg];
   }, [points]);
 
-  // Nothing to do here, but keep the effect for future imperative map ops
   useEffect(() => {}, [points]);
 
   if (points.length === 0) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-sm text-slate-500">
+      <div className="flex h-72 items-center justify-center rounded-eco-lg border border-dashed border-eco-gray-300 bg-eco-white font-sans text-body-sm text-eco-gray-500">
         Sin puntos activos para el mapa de calor.
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl ring-1 ring-slate-200 shadow-soft">
+    <div className="overflow-hidden rounded-eco-lg shadow-eco-lg ring-1 ring-eco-gray-200">
       <MapContainer
         center={center}
         zoom={13}
@@ -60,27 +51,30 @@ export function MapaHeatmap({ points }: Props) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {points.map((point, idx) => (
-          <CircleMarker
-            key={`${point.latitud}-${point.longitud}-${idx}`}
-            center={[point.latitud, point.longitud]}
-            radius={10 + point.peso * 2}
-            pathOptions={{
-              color: pesoAColor(point.peso),
-              fillColor: pesoAColor(point.peso),
-              fillOpacity: 0.55,
-              weight: 1.5,
-            }}
-          >
-            <Tooltip>
-              <span className="text-xs">
-                {point.latitud.toFixed(5)}, {point.longitud.toFixed(5)}
-                <br />
-                Peso: {point.peso}
-              </span>
-            </Tooltip>
-          </CircleMarker>
-        ))}
+        {points.map((point, idx) => {
+          const fill = heatColorByWeight(point.peso);
+          return (
+            <CircleMarker
+              key={`${point.latitud}-${point.longitud}-${idx}`}
+              center={[point.latitud, point.longitud]}
+              radius={10 + point.peso * 2}
+              pathOptions={{
+                color: fill,
+                fillColor: fill,
+                fillOpacity: 0.55,
+                weight: 1.5,
+              }}
+            >
+              <Tooltip>
+                <span className="font-mono text-code text-eco-gray-700">
+                  {point.latitud.toFixed(5)}, {point.longitud.toFixed(5)}
+                  <br />
+                  Peso: {point.peso}
+                </span>
+              </Tooltip>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
     </div>
   );

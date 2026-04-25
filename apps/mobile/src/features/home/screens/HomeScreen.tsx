@@ -16,6 +16,16 @@ import {
 
 import { crearReporte, crearSolicitud, getHealth } from "../../../core/api/client";
 import { env } from "../../../config/env";
+import {
+  BorderRadius,
+  Colors,
+  EcoIcons,
+  Shadows,
+  Spacing,
+  Typography,
+  touchTarget,
+} from "../../../design-system";
+import { DesignSystemScreen } from "../../design-system/DesignSystemScreen";
 import { RecicladorScreen } from "../../reciclador/screens/RecicladorScreen";
 
 type VistaSesion = "ciudadano" | "reciclador";
@@ -31,11 +41,12 @@ export function HomeScreen() {
   const [telegramId, setTelegramId] = useState(String(env.mobile.demoTelegramId));
   const [cargandoReporte, setCargandoReporte] = useState(false);
   const [cargandoSolicitud, setCargandoSolicitud] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ visible: boolean; mensaje: string; error: boolean }>({
-    visible: false,
-    mensaje: "",
-    error: false,
-  });
+  const [snackbar, setSnackbar] = useState<{
+    visible: boolean;
+    mensaje: string;
+    tipo: "exito" | "error" | "info" | "advertencia";
+  }>({ visible: false, mensaje: "", tipo: "info" });
+  const [mostrarDesignSystem, setMostrarDesignSystem] = useState(false);
 
   useEffect(() => {
     getHealth()
@@ -49,8 +60,8 @@ export function HomeScreen() {
     return "error";
   }, [backendStatus]);
 
-  function mostrarMensaje(mensaje: string, error = false) {
-    setSnackbar({ visible: true, mensaje, error });
+  function mostrarMensaje(mensaje: string, tipo: "exito" | "error" | "info" | "advertencia" = "info") {
+    setSnackbar({ visible: true, mensaje, tipo });
   }
 
   async function enviarReporte() {
@@ -62,10 +73,18 @@ export function HomeScreen() {
         longitud: env.mobile.longitudInicial,
         descripcion: descripcionReporte || undefined,
       });
-      mostrarMensaje(`Reporte #${data.id} enviado.`);
+      mostrarMensaje(
+        `Tu reporte fue enviado. Un reciclador lo vera pronto. (#${data.id})`,
+        "exito",
+      );
       setDescripcionReporte("");
     } catch (err) {
-      mostrarMensaje(err instanceof Error ? err.message : "Error al enviar reporte.", true);
+      mostrarMensaje(
+        err instanceof Error
+          ? err.message
+          : "No pudimos guardar tu reporte. Revisa tu conexion a internet e intenta de nuevo.",
+        "error",
+      );
     } finally {
       setCargandoReporte(false);
     }
@@ -74,7 +93,7 @@ export function HomeScreen() {
   async function enviarSolicitud() {
     const tid = Number(telegramId);
     if (!Number.isFinite(tid) || tid <= 0) {
-      mostrarMensaje("Ingresa un Telegram ID valido.", true);
+      mostrarMensaje("Ingresa un Telegram ID valido.", "error");
       return;
     }
     setCargandoSolicitud(true);
@@ -87,26 +106,55 @@ export function HomeScreen() {
         descripcion: descripcionSolicitud || undefined,
         kg_estimados: 0,
       });
-      mostrarMensaje(`Solicitud #${data.id} enviada. Te avisamos por Telegram.`);
+      mostrarMensaje(`Solicitud #${data.id} enviada. Te avisamos por Telegram.`, "exito");
       setDescripcionSolicitud("");
     } catch (err) {
-      mostrarMensaje(err instanceof Error ? err.message : "Error al enviar solicitud.", true);
+      mostrarMensaje(
+        err instanceof Error ? err.message : "No pudimos enviar la solicitud. Intenta de nuevo.",
+        "error",
+      );
     } finally {
       setCargandoSolicitud(false);
     }
   }
 
+  const snackbarStyle =
+    snackbar.tipo === "exito"
+      ? { backgroundColor: Colors.teal }
+      : snackbar.tipo === "error"
+        ? { backgroundColor: Colors.danger }
+        : snackbar.tipo === "advertencia"
+          ? { backgroundColor: Colors.yellow }
+          : { backgroundColor: Colors.navy };
+
+  const snackbarTextColor =
+    snackbar.tipo === "advertencia" ? Colors.navy : Colors.white;
+
+  if (mostrarDesignSystem) {
+    return (
+      <SafeAreaView className="flex-1 bg-eco-white">
+        <DesignSystemScreen onClose={() => setMostrarDesignSystem(false)} />
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Appbar.Header mode="small" elevated>
-        <Appbar.Content title="EcoRuta" />
+    <SafeAreaView className="flex-1 bg-eco-white">
+      <Appbar.Header mode="small" elevated style={styles.appBar}>
+        <Appbar.Content title="EcoRuta" titleStyle={Typography.heading2} color={Colors.navy} />
+        <Appbar.Action
+          icon="palette"
+          color={Colors.teal}
+          onPress={() => setMostrarDesignSystem(true)}
+          accessibilityLabel="Abrir referencia del design system"
+        />
         <Badge
           style={[
             styles.statusBadge,
             statusSeverity === "ok"
               ? { backgroundColor: theme.colors.primary }
               : statusSeverity === "loading"
-                ? { backgroundColor: theme.colors.tertiary }
+                ? { backgroundColor: Colors.sage }
                 : { backgroundColor: theme.colors.error },
           ]}
         >
@@ -114,23 +162,28 @@ export function HomeScreen() {
         </Badge>
       </Appbar.Header>
 
-      <View style={styles.switchContainer}>
+      <View className="px-eco-4 pb-2 pt-2">
         <SegmentedButtons
           value={vista}
           onValueChange={(value) => setVista(value as VistaSesion)}
           density="regular"
           buttons={[
-            { value: "ciudadano", label: "Ciudadano", icon: "account" },
-            { value: "reciclador", label: "Reciclador", icon: "bike" },
+            { value: "ciudadano", label: "Ciudadano", icon: EcoIcons.citizenRole },
+            { value: "reciclador", label: "Reciclador", icon: EcoIcons.recyclerRole },
           ]}
         />
       </View>
 
       {vista === "ciudadano" ? (
         <>
-          <ScrollView contentContainerStyle={styles.container}>
-            <Card mode="elevated" style={styles.card}>
-              <Card.Title title="Reportar punto critico" />
+          <ScrollView className="flex-1" contentContainerStyle={styles.container}>
+            <Card mode="elevated" style={[styles.card, Shadows.md]}>
+              <Card.Title
+                title="Reportar punto critico"
+                titleStyle={Typography.heading3}
+                subtitle="Emergencia"
+                subtitleStyle={[Typography.caption, { color: Colors.gray700 }]}
+              />
               <Card.Content style={styles.cardContent}>
                 <TextInput
                   mode="outlined"
@@ -139,36 +192,63 @@ export function HomeScreen() {
                   onChangeText={setDescripcionReporte}
                   multiline
                   numberOfLines={3}
+                  style={Typography.bodyLg}
                 />
                 <Button
                   mode="contained"
-                  icon="map-marker"
-                  contentStyle={styles.buttonTall}
+                  icon={EcoIcons.emergency}
+                  buttonColor={Colors.danger}
+                  textColor={Colors.white}
+                  contentStyle={{ minHeight: touchTarget.ctaCiudadano }}
+                  style={{ borderRadius: BorderRadius.lg }}
+                  labelStyle={Typography.labelLg}
                   loading={cargandoReporte}
                   disabled={cargandoReporte}
                   onPress={() => void enviarReporte()}
+                  accessibilityLabel="Enviar reporte de emergencia en tu ubicacion"
+                  accessibilityHint="Envia el reporte al equipo de recicladores"
                 >
                   Enviar reporte
                 </Button>
               </Card.Content>
             </Card>
 
-            <Card mode="elevated" style={styles.card}>
-              <Card.Title title="Solicitar recoleccion" />
+            <Card mode="elevated" style={[styles.card, Shadows.md]}>
+              <Card.Title
+                title="Solicitar recoleccion"
+                titleStyle={Typography.heading3}
+                subtitle="Recoleccion programada"
+                subtitleStyle={[Typography.caption, { color: Colors.gray700 }]}
+              />
               <Card.Content style={styles.cardContent}>
-                <Text variant="labelLarge">Material</Text>
+                <Text style={[Typography.labelMd, { color: Colors.gray700 }]}>Material</Text>
                 <View style={styles.chipRow}>
-                  {(["carton", "vidrio", "plastico", "mixto"] as Material[]).map((material) => (
-                    <Chip
-                      key={material}
-                      selected={materialSeleccionado === material}
-                      showSelectedOverlay
-                      onPress={() => setMaterialSeleccionado(material)}
-                      style={styles.chip}
-                    >
-                      {material}
-                    </Chip>
-                  ))}
+                  {(["carton", "vidrio", "plastico", "mixto"] as Material[]).map((material) => {
+                    const selected = materialSeleccionado === material;
+                    return (
+                      <Chip
+                        key={material}
+                        selected={selected}
+                        onPress={() => setMaterialSeleccionado(material)}
+                        style={[
+                          styles.chip,
+                          {
+                            height: touchTarget.chipAction,
+                            backgroundColor: selected ? Colors.teal : Colors.gray100,
+                            borderColor: selected ? Colors.teal : Colors.gray300,
+                            borderWidth: selected ? 0 : 1,
+                          },
+                        ]}
+                        textStyle={[
+                          Typography.labelMd,
+                          { color: selected ? Colors.white : Colors.gray700 },
+                        ]}
+                        selectedColor={Colors.teal}
+                      >
+                        {material}
+                      </Chip>
+                    );
+                  })}
                 </View>
 
                 <TextInput
@@ -177,20 +257,28 @@ export function HomeScreen() {
                   keyboardType="number-pad"
                   value={telegramId}
                   onChangeText={setTelegramId}
+                  style={Typography.bodyMd}
                 />
                 <TextInput
                   mode="outlined"
                   label="Descripcion (opcional)"
                   value={descripcionSolicitud}
                   onChangeText={setDescripcionSolicitud}
+                  style={Typography.bodyMd}
                 />
                 <Button
                   mode="contained"
-                  icon="send"
-                  contentStyle={styles.buttonTall}
+                  icon={EcoIcons.collection}
+                  buttonColor={Colors.teal}
+                  textColor={Colors.white}
+                  contentStyle={{ minHeight: touchTarget.ctaCiudadano }}
+                  style={{ borderRadius: BorderRadius.lg }}
+                  labelStyle={Typography.labelLg}
                   loading={cargandoSolicitud}
                   disabled={cargandoSolicitud}
                   onPress={() => void enviarSolicitud()}
+                  accessibilityLabel="Enviar solicitud de recoleccion"
+                  accessibilityHint="Registra la solicitud con el material seleccionado"
                 >
                   Solicitar recoleccion
                 </Button>
@@ -198,7 +286,14 @@ export function HomeScreen() {
             </Card>
           </ScrollView>
 
-          <FAB icon="bike" style={styles.fab} onPress={() => setVista("reciclador")} />
+          <FAB
+            icon={EcoIcons.recyclerRole}
+            style={[styles.fab, Shadows.lg]}
+            color={Colors.white}
+            size="medium"
+            onPress={() => setVista("reciclador")}
+            accessibilityLabel="Cambiar a vista reciclador"
+          />
         </>
       ) : (
         <RecicladorScreen />
@@ -207,58 +302,53 @@ export function HomeScreen() {
       <Snackbar
         visible={snackbar.visible}
         onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
-        duration={3500}
-        style={snackbar.error ? { backgroundColor: theme.colors.errorContainer } : undefined}
+        duration={4000}
+        style={snackbarStyle}
+        elevation={4}
       >
-        <Text style={snackbar.error ? { color: theme.colors.onErrorContainer } : undefined}>
-          {snackbar.mensaje}
-        </Text>
+        <Text style={[Typography.bodyMd, { color: snackbarTextColor }]}>{snackbar.mensaje}</Text>
       </Snackbar>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#F4F8F3",
-  },
-  switchContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 6,
+  appBar: {
+    backgroundColor: Colors.white,
+    ...Shadows.sm,
   },
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.s4,
     paddingBottom: 90,
-    gap: 14,
+    gap: Spacing.s4,
   },
   statusBadge: {
-    marginRight: 12,
-    color: "#FFFFFF",
-    fontSize: 12,
+    marginRight: Spacing.s3,
+    color: Colors.white,
+    ...Typography.caption,
   },
   card: {
-    borderRadius: 18,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
   },
   cardContent: {
-    gap: 12,
-    paddingBottom: 8,
+    gap: Spacing.s3,
+    paddingBottom: Spacing.s2,
   },
   chipRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: Spacing.s2,
   },
   chip: {
-    borderRadius: 12,
-  },
-  buttonTall: {
-    minHeight: 52,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.s4,
   },
   fab: {
     position: "absolute",
-    right: 16,
-    bottom: 16,
+    right: Spacing.s4,
+    bottom: Spacing.s4,
+    backgroundColor: Colors.teal,
+    borderRadius: BorderRadius.full,
   },
 });

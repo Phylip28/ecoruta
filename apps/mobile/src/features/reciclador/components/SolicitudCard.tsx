@@ -9,6 +9,14 @@ import {
   useTheme,
 } from "react-native-paper";
 
+import {
+  BorderRadius,
+  Colors,
+  EcoIcons,
+  Spacing,
+  Typography,
+  touchTarget,
+} from "../../../design-system";
 import type { EstadoSolicitud, Solicitud } from "../types";
 
 type SolicitudCardProps = {
@@ -23,6 +31,15 @@ const estadoInfo: Record<EstadoSolicitud, { label: string; progress: number }> =
   completado: { label: "Completado", progress: 1 },
 };
 
+const estadoChipStyle: Record<
+  EstadoSolicitud,
+  { backgroundColor: string; color: string }
+> = {
+  pendiente: { backgroundColor: Colors.yellow, color: Colors.navy },
+  en_camino: { backgroundColor: Colors.lime, color: Colors.navy },
+  completado: { backgroundColor: Colors.teal, color: Colors.white },
+};
+
 export function SolicitudCard({
   solicitud,
   onEstado,
@@ -32,6 +49,7 @@ export function SolicitudCard({
   const puedeEnCamino = solicitud.estado === "pendiente";
   const puedeCompletar = solicitud.estado === "en_camino";
   const info = estadoInfo[solicitud.estado];
+  const chipColors = estadoChipStyle[solicitud.estado];
 
   const accionSiguiente = puedeEnCamino
     ? "Aceptar ruta"
@@ -40,13 +58,19 @@ export function SolicitudCard({
       : "Servicio finalizado";
 
   return (
-    <Card mode="elevated" style={styles.card}>
+    <Card mode="elevated" style={[styles.card, { backgroundColor: Colors.white }]}>
       <Card.Title
         title={`Solicitud #${solicitud.id}`}
-        titleVariant="titleLarge"
+        titleStyle={Typography.heading3}
         subtitle={`Material: ${solicitud.material ?? "mixto"} · ${solicitud.kg_estimados} kg`}
+        subtitleStyle={Typography.bodyMd}
         right={() => (
-          <Chip compact style={styles.stateChip} textStyle={styles.stateChipText}>
+          <Chip
+            compact
+            style={[styles.stateChip, { backgroundColor: chipColors.backgroundColor }]}
+            textStyle={[Typography.labelMd, { color: chipColors.color }]}
+            accessibilityLabel={`Estado: ${info.label}`}
+          >
             {info.label}
           </Chip>
         )}
@@ -56,16 +80,20 @@ export function SolicitudCard({
         <List.Item
           title={solicitud.descripcion ?? "Sin descripcion"}
           titleNumberOfLines={2}
+          titleStyle={Typography.bodyMd}
           description={`Lat/Lon: ${solicitud.latitud.toFixed(4)}, ${solicitud.longitud.toFixed(4)}`}
-          left={(props) => <List.Icon {...props} icon="map-marker" color={theme.colors.primary} />}
+          descriptionStyle={[Typography.caption, { color: Colors.gray500 }]}
+          left={(props) => (
+            <List.Icon {...props} icon={EcoIcons.collection} color={theme.colors.primary} />
+          )}
           style={styles.listRow}
         />
-        <Text variant="bodyLarge" style={styles.nextAction}>
+        <Text style={[Typography.bodyMd, { color: Colors.gray700 }]}>
           Siguiente paso: {accionSiguiente}
         </Text>
         <ProgressBar
           progress={info.progress}
-          color={theme.colors.primary}
+          color={Colors.lime}
           style={styles.progress}
         />
       </Card.Content>
@@ -75,17 +103,27 @@ export function SolicitudCard({
           mode="contained"
           disabled={disabled || !puedeEnCamino}
           onPress={() => onEstado(solicitud.id, "en_camino")}
-          contentStyle={styles.buttonTall}
-          labelStyle={styles.buttonLabel}
+          contentStyle={{ minHeight: touchTarget.ctaReciclador }}
+          style={{ flex: 1, borderRadius: BorderRadius.lg }}
+          buttonColor={Colors.teal}
+          textColor={Colors.white}
+          labelStyle={Typography.labelLg}
+          accessibilityLabel="Marcar solicitud en camino"
+          accessibilityHint="Indica que vas en ruta hacia el punto"
         >
           Aceptar ruta
         </Button>
         <Button
-          mode="contained-tonal"
+          mode="contained"
           disabled={disabled || !puedeCompletar}
           onPress={() => onEstado(solicitud.id, "completado")}
-          contentStyle={styles.buttonTall}
-          labelStyle={styles.buttonLabel}
+          contentStyle={{ minHeight: touchTarget.ctaReciclador }}
+          style={{ flex: 1, borderRadius: BorderRadius.lg }}
+          buttonColor={Colors.yellow}
+          textColor={Colors.black}
+          labelStyle={Typography.labelLg}
+          accessibilityLabel="Completar recoleccion en este punto"
+          accessibilityHint="Confirma que terminaste el servicio"
         >
           Completar
         </Button>
@@ -96,44 +134,29 @@ export function SolicitudCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
-    marginBottom: 12,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.s3,
   },
   content: {
-    gap: 6,
+    gap: Spacing.s2,
   },
   stateChip: {
-    marginRight: 14,
-    marginTop: 8,
-  },
-  stateChipText: {
-    fontWeight: "700",
+    marginRight: Spacing.s3,
+    marginTop: Spacing.s2,
+    borderRadius: BorderRadius.full,
   },
   listRow: {
     paddingHorizontal: 0,
   },
-  nextAction: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: 2,
-    marginBottom: 2,
-  },
   progress: {
-    height: 10,
-    borderRadius: 999,
+    height: 6,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.gray300,
   },
   actions: {
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    gap: 8,
-  },
-  buttonTall: {
-    minHeight: 52,
-  },
-  buttonLabel: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700",
+    flexDirection: "column",
+    paddingHorizontal: Spacing.s3,
+    paddingBottom: Spacing.s3,
+    gap: Spacing.s2,
   },
 });

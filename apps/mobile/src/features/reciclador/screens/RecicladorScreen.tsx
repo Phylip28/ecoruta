@@ -15,6 +15,15 @@ import {
 
 import { env } from "../../../config/env";
 import {
+  BorderRadius,
+  Colors,
+  EcoIcons,
+  Shadows,
+  Spacing,
+  Typography,
+  touchTarget,
+} from "../../../design-system";
+import {
   actualizarEstadoSolicitud,
   crearSolicitudDemo,
   listarSolicitudesPendientes,
@@ -157,10 +166,10 @@ export function RecicladorScreen() {
   }
 
   return (
-    <View style={styles.wrapper}>
+    <View className="flex-1 gap-eco-3 bg-eco-gray-50 px-eco-4 pb-[78px]">
       <Banner
         visible
-        icon="white-balance-sunny"
+        icon={EcoIcons.stats}
         style={styles.banner}
         actions={[
           {
@@ -173,21 +182,26 @@ export function RecicladorScreen() {
           },
         ]}
       >
-        Sesion reciclador en modo calle: botones amplios y lectura rapida bajo sol.
+        Sesion reciclador: botones amplios (64dp) y contraste alto para uso al aire libre.
       </Banner>
 
-      <Surface style={styles.activeSurface} elevation={2}>
-        <Text variant="titleLarge" style={styles.activeTitle}>
-          Solicitud activa mas cercana
+      <Surface style={[styles.activeSurface, Shadows.lg]} elevation={0}>
+        <Text style={[Typography.caption, { color: Colors.sage, textTransform: "uppercase" }]}>
+          Solicitud activa
+        </Text>
+        <Text style={[Typography.heading2, { color: Colors.navy, marginTop: Spacing.s1 }]}>
+          Mas cercana
         </Text>
 
         {solicitudActiva ? (
           <>
             <List.Item
               title={`Solicitud #${solicitudActiva.id}`}
+              titleStyle={Typography.heading3}
               description={`${solicitudActiva.material ?? "mixto"} · ${solicitudActiva.kg_estimados} kg`}
+              descriptionStyle={Typography.bodyMd}
               left={(props) => (
-                <List.Icon {...props} icon="bike-fast" color={theme.colors.primary} />
+                <List.Icon {...props} icon={EcoIcons.routes} color={theme.colors.primary} />
               )}
               style={styles.activeRow}
             />
@@ -197,40 +211,51 @@ export function RecicladorScreen() {
                 mode="contained"
                 onPress={() => cambiarEstado(solicitudActiva.id, "en_camino")}
                 disabled={cargando || solicitudActiva.estado !== "pendiente"}
-                contentStyle={styles.buttonTall}
+                contentStyle={{ minHeight: touchTarget.ctaReciclador }}
+                style={{ flex: 1, borderRadius: BorderRadius.lg }}
+                buttonColor={Colors.teal}
+                textColor={Colors.white}
+                labelStyle={Typography.labelLg}
+                accessibilityLabel="Marcar en camino hacia la solicitud activa"
               >
                 Aceptar ruta
               </Button>
               <Button
-                mode="contained-tonal"
+                mode="contained"
                 onPress={() => cambiarEstado(solicitudActiva.id, "completado")}
                 disabled={cargando || solicitudActiva.estado !== "en_camino"}
-                contentStyle={styles.buttonTall}
+                contentStyle={{ minHeight: touchTarget.ctaReciclador }}
+                style={{ flex: 1, borderRadius: BorderRadius.lg }}
+                buttonColor={Colors.yellow}
+                textColor={Colors.black}
+                labelStyle={Typography.labelLg}
+                accessibilityLabel="Completar servicio de recoleccion"
               >
                 Completar servicio
               </Button>
             </View>
           </>
         ) : (
-          <Text variant="bodyLarge">No hay solicitud activa en este momento.</Text>
+          <Text style={[Typography.bodyMd, { color: Colors.gray700 }]}>
+            No hay solicitud activa en este momento.
+          </Text>
         )}
       </Surface>
 
-      <Surface style={styles.panel} elevation={1}>
-        <Text variant="titleMedium" style={styles.panelTitle}>
-          Parametros de ruta
-        </Text>
+      <Surface style={[styles.panel, Shadows.sm]} elevation={0}>
+        <Text style={[Typography.heading3, { color: Colors.navy }]}>Parametros de ruta</Text>
         <TextInput
           mode="outlined"
           label="Reciclador ID"
           value={recicladorId}
           onChangeText={setRecicladorId}
           keyboardType="numeric"
+          style={Typography.bodyMd}
         />
         <View style={styles.row}>
           <TextInput
             mode="outlined"
-            style={styles.col}
+            style={[styles.col, Typography.bodyMd]}
             label="Latitud"
             value={latitud}
             onChangeText={setLatitud}
@@ -238,7 +263,7 @@ export function RecicladorScreen() {
           />
           <TextInput
             mode="outlined"
-            style={styles.col}
+            style={[styles.col, Typography.bodyMd]}
             label="Longitud"
             value={longitud}
             onChangeText={setLongitud}
@@ -247,34 +272,29 @@ export function RecicladorScreen() {
         </View>
 
         <View style={styles.kpis}>
-          <Surface style={styles.kpiCard} elevation={0}>
-            <Text variant="headlineSmall" style={styles.kpiValue}>
-              {resumen.pendientes}
-            </Text>
-            <Text variant="labelLarge">Pendientes</Text>
+          <Surface style={[styles.kpiCard, { backgroundColor: Colors.gray50 }]} elevation={0}>
+            <Text style={[Typography.metricSm, { color: Colors.navy }]}>{resumen.pendientes}</Text>
+            <Text style={[Typography.caption, { color: Colors.gray700 }]}>Pendientes</Text>
           </Surface>
-          <Surface style={styles.kpiCard} elevation={0}>
-            <Text variant="headlineSmall" style={styles.kpiValue}>
-              {resumen.enCamino}
-            </Text>
-            <Text variant="labelLarge">En camino</Text>
+          <Surface style={[styles.kpiCard, { backgroundColor: Colors.gray50 }]} elevation={0}>
+            <Text style={[Typography.metricSm, { color: Colors.navy }]}>{resumen.enCamino}</Text>
+            <Text style={[Typography.caption, { color: Colors.gray700 }]}>En camino</Text>
           </Surface>
-          <Surface style={styles.kpiCard} elevation={0}>
-            <Text variant="headlineSmall" style={styles.kpiValue}>
-              {completadasSesion}
-            </Text>
-            <Text variant="labelLarge">Completadas</Text>
+          <Surface style={[styles.kpiCard, { backgroundColor: Colors.gray50 }]} elevation={0}>
+            <Text style={[Typography.metricSm, { color: Colors.navy }]}>{completadasSesion}</Text>
+            <Text style={[Typography.caption, { color: Colors.gray700 }]}>Completadas</Text>
           </Surface>
         </View>
 
         {distanciaKm !== null ? (
           <List.Item
             title={`Distancia sugerida: ${distanciaKm.toFixed(2)} km`}
-            left={(props) => <List.Icon {...props} icon="map-search" />}
+            titleStyle={Typography.bodyMd}
+            left={(props) => <List.Icon {...props} icon={EcoIcons.routes} />}
           />
         ) : null}
         {rutaIds.length > 0 ? (
-          <HelperText type="info" style={styles.routeText}>
+          <HelperText type="info" style={[Typography.bodyMd, { marginTop: -2 }]}>
             Orden recomendado: {rutaIds.join(" -> ")}
           </HelperText>
         ) : null}
@@ -282,14 +302,12 @@ export function RecicladorScreen() {
 
       <View style={styles.statusRow}>
         {cargando ? <ActivityIndicator animating size={18} color={theme.colors.primary} /> : null}
-        <Text variant="bodyMedium" style={styles.statusText}>
-          {mensaje}
-        </Text>
+        <Text style={[Typography.bodyMd, styles.statusText]}>{mensaje}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
         {solicitudes.length === 0 ? (
-          <Text variant="bodyLarge">No hay solicitudes en la sesion actual.</Text>
+          <Text style={Typography.bodyMd}>No hay solicitudes en la sesion actual.</Text>
         ) : (
           solicitudes.map((item) => (
             <SolicitudCard
@@ -304,99 +322,81 @@ export function RecicladorScreen() {
 
       <FAB
         icon="plus"
-        label="Crear solicitud demo"
-        style={styles.fab}
+        label="Demo"
+        style={[styles.fab, { backgroundColor: Colors.teal }]}
+        color={Colors.white}
         onPress={crearDemo}
         disabled={cargando}
+        accessibilityLabel="Crear solicitud demo"
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 78,
-    gap: 12,
-  },
   banner: {
-    borderRadius: 16,
-    marginTop: 8,
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.s2,
+    backgroundColor: Colors.white,
   },
   activeSurface: {
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-  },
-  activeTitle: {
-    fontWeight: "700",
-    fontSize: 22,
-    paddingHorizontal: 8,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.s3,
+    paddingHorizontal: Spacing.s2,
+    backgroundColor: Colors.white,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.teal,
   },
   activeRow: {
     paddingHorizontal: 0,
   },
   quickActions: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 8,
-    paddingBottom: 8,
+    flexDirection: "column",
+    gap: Spacing.s2,
+    paddingHorizontal: Spacing.s2,
+    paddingBottom: Spacing.s2,
   },
   panel: {
-    borderRadius: 16,
-    padding: 12,
-    gap: 10,
-  },
-  panelTitle: {
-    fontWeight: "700",
-    fontSize: 18,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.s3,
+    gap: Spacing.s2,
+    backgroundColor: Colors.white,
   },
   row: {
     flexDirection: "row",
-    gap: 8,
+    gap: Spacing.s2,
   },
   col: {
     flex: 1,
   },
   kpis: {
     flexDirection: "row",
-    gap: 8,
+    gap: Spacing.s2,
   },
   kpiCard: {
     flex: 1,
-    borderRadius: 12,
-    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.s2,
     alignItems: "center",
-  },
-  kpiValue: {
-    fontWeight: "700",
-  },
-  routeText: {
-    fontSize: 15,
-    marginTop: -2,
-  },
-  buttonTall: {
-    minHeight: 52,
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: Spacing.s2,
     minHeight: 24,
-    paddingHorizontal: 4,
+    paddingHorizontal: Spacing.s1,
   },
   statusText: {
-    fontSize: 16,
     flex: 1,
+    color: Colors.gray700,
   },
   list: {
-    paddingTop: 4,
-    paddingBottom: 8,
+    paddingTop: Spacing.s1,
+    paddingBottom: Spacing.s2,
   },
   fab: {
     position: "absolute",
-    right: 16,
+    right: Spacing.s4,
     bottom: 14,
   },
 });

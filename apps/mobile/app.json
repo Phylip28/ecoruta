@@ -2,9 +2,17 @@
   "expo": {
     "name": "EcoRuta",
     "slug": "ecoruta-mobile",
+    "web": {
+      "bundler": "metro"
+    },
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"]
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

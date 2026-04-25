@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     db_password: str = "cambia_esto"
 
     telegram_bot_token: str | None = None
+    ors_api_key: str | None = None
 
     ciudadano_token: str = "ciudadano-dev-token"
     reciclador_token: str = "reciclador-dev-token"

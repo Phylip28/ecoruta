@@ -69,6 +69,7 @@ export function RecicladorScreen({ onFeedback }: RecicladorScreenProps = {}) {
   const [completadasSesion, setCompletadasSesion] = useState(0);
   const [kgSesion, setKgSesion] = useState(0);
   const [cargando, setCargando] = useState(false);
+  const [cargandoId, setCargandoId] = useState<number | null>(null);
   const [recicladorLat, setRecicladorLat] = useState(env.mobile.latitudInicial);
   const [recicladorLon, setRecicladorLon] = useState(env.mobile.longitudInicial);
 
@@ -121,15 +122,7 @@ export function RecicladorScreen({ onFeedback }: RecicladorScreenProps = {}) {
   }
 
   async function ejecutar(action: () => Promise<void>) {
-    setCargando(true);
-    try {
-      await action();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Error inesperado";
-      onFeedback?.(msg, "error");
-    } finally {
-      setCargando(false);
-    }
+    await action();
   }
 
   const cargarPendientes = useCallback(async () => {
@@ -168,23 +161,29 @@ export function RecicladorScreen({ onFeedback }: RecicladorScreenProps = {}) {
   }, [cargarPendientes]);
 
   async function accionSolicitud(solicitud: Solicitud) {
-    if (solicitud.estado === "pendiente") {
-      await ejecutar(async () => {
+    if (cargandoId !== null) return;
+    setCargandoId(solicitud.id);
+    try {
+      if (solicitud.estado === "pendiente") {
         const upd = await actualizarEstadoSolicitud(solicitud.id, "en_camino");
         upsertSolicitud(upd);
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        onFeedback?.(`En camino a solicitud #${upd.id}`, "info");
-      });
-    } else if (solicitud.estado === "en_camino") {
-      await ejecutar(async () => {
+        const label = solicitud.tipo === "emergencia" ? "emergencia" : "solicitud";
+        onFeedback?.(`En camino a ${label} #${upd.id}`, "info");
+      } else if (solicitud.estado === "en_camino") {
         const upd = await actualizarEstadoSolicitud(solicitud.id, "completado");
         setSolicitudes((prev) => prev.filter((s) => s.id !== upd.id));
         setRutaIds((prev) => prev.filter((id) => id !== upd.id));
         setCompletadasSesion((n) => n + 1);
         setKgSesion((k) => k + (solicitud.kg_estimados || KG_POR_SERVICIO));
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onFeedback?.(`¡Completado! Solicitud #${upd.id}`, "exito");
-      });
+        onFeedback?.(`¡Completado! #${upd.id}`, "exito");
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error inesperado";
+      onFeedback?.(msg, "error");
+    } finally {
+      setCargandoId(null);
     }
   }
 
@@ -192,13 +191,14 @@ export function RecicladorScreen({ onFeedback }: RecicladorScreenProps = {}) {
     const dist = haversineKm(recicladorLat, recicladorLon, item.latitud, item.longitud);
     const enCaminoItem = item.estado === "en_camino";
     const esEmergencia = item.tipo === "emergencia";
+    const esteItemCargando = cargandoId === item.id;
 
     const dotColor = enCaminoItem ? Colors.teal : esEmergencia ? "#EF4444" : "#22C55E";
-    const cardBorder = enCaminoItem ? Colors.teal : esEmergencia ? "#EF444430" : Colors.gray200;
+    const cardBorder = enCaminoItem ? Colors.teal : esEmergencia ? "#EF444440" : Colors.gray200;
     const cardBg = enCaminoItem ? `${Colors.teal}08` : esEmergencia ? "#EF444408" : Colors.white;
 
-    const btnBg = enCaminoItem ? Colors.teal : Colors.yellow;
-    const btnFg = enCaminoItem ? Colors.white : Colors.navy;
+    const btnBg = enCaminoItem ? Colors.teal : esEmergencia ? "#EF4444" : Colors.yellow;
+    const btnFg = enCaminoItem || esEmergencia ? Colors.white : Colors.navy;
     const btnLabel = enCaminoItem ? "Completar" : "Voy";
 
     return (
@@ -237,8 +237,8 @@ export function RecicladorScreen({ onFeedback }: RecicladorScreenProps = {}) {
           textColor={btnFg}
           compact
           onPress={() => void accionSolicitud(item)}
-          disabled={cargando}
-          loading={cargando && enCaminoItem}
+          disabled={cargandoId !== null}
+          loading={esteItemCargando}
           style={styles.listBtn}
           labelStyle={styles.listBtnLabel}
         >

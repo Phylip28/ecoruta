@@ -2,17 +2,17 @@ import { useMemo, useState } from "react";
 import { FileSearch } from "lucide-react";
 
 import { tableEstadoBadges, tableTypeBadges } from "../../design-system";
-import type { ReporteDemo } from "../../data/adminDemoData";
+import type { Reporte } from "../../core/api";
 import { TableSearchField } from "./TableSearchField";
 
 type ReportesTableProps = {
-  rows: ReporteDemo[];
+  rows: Reporte[];
 };
 
-function TipoLabel({ tipo }: { tipo: ReporteDemo["tipo"] }) {
+function TipoLabel({ tipo }: { tipo: Reporte["tipo"] }) {
   const key = tipo === "emergencia" ? "emergencia" : "recoleccion";
   const s = tableTypeBadges[key];
-  const text = tipo === "emergencia" ? "Emergencia" : "Solicitud / recolección";
+  const text = tipo === "emergencia" ? "Emergencia" : "Solicitud";
   return (
     <span
       className="inline-block rounded-eco-sm px-2 py-0.5 font-sans text-caption font-semibold"
@@ -23,7 +23,7 @@ function TipoLabel({ tipo }: { tipo: ReporteDemo["tipo"] }) {
   );
 }
 
-function EstadoLabel({ estado }: { estado: ReporteDemo["estado"] }) {
+function EstadoLabel({ estado }: { estado: Reporte["estado"] }) {
   const s = tableEstadoBadges[estado];
   const text =
     estado === "pendiente" ? "Pendiente" : estado === "en_camino" ? "En camino" : "Completado";
@@ -37,6 +37,10 @@ function EstadoLabel({ estado }: { estado: ReporteDemo["estado"] }) {
   );
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
+}
+
 export function ReportesTable({ rows }: ReportesTableProps) {
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
@@ -44,11 +48,11 @@ export function ReportesTable({ rows }: ReportesTableProps) {
     if (!s) return rows;
     return rows.filter(
       (r) =>
-        r.id.toLowerCase().includes(s) ||
-        r.comuna.toLowerCase().includes(s) ||
-        r.barrio.toLowerCase().includes(s) ||
-        r.descripcion.toLowerCase().includes(s) ||
-        (r.reciclador?.toLowerCase().includes(s) ?? false),
+        String(r.id).includes(s) ||
+        r.tipo.includes(s) ||
+        r.estado.includes(s) ||
+        (r.descripcion?.toLowerCase().includes(s) ?? false) ||
+        (r.reciclador_id !== null && String(r.reciclador_id).includes(s)),
     );
   }, [rows, q]);
 
@@ -58,7 +62,7 @@ export function ReportesTable({ rows }: ReportesTableProps) {
         <TableSearchField
           value={q}
           onChange={setQ}
-          placeholder="Buscar por ID, comuna, descripción, reciclador…"
+          placeholder="Buscar por ID, tipo, estado, descripción…"
         />
         <p className="shrink-0 text-right font-sans text-caption text-eco-gray-500">
           {filtered.length} de {rows.length} resultados
@@ -68,7 +72,7 @@ export function ReportesTable({ rows }: ReportesTableProps) {
         <div className="flex flex-col items-center justify-center gap-2 rounded-eco-lg border border-dashed border-eco-gray-200 py-8">
           <FileSearch className="h-8 w-8 text-eco-gray-300" aria-hidden />
           <p className="font-sans text-body-sm text-eco-gray-600">
-            {q.trim() ? `No coinciden filas con «${q.trim()}».` : "No hay filas en esta lista."}
+            {q.trim() ? `No coinciden filas con «${q.trim()}».` : "No hay reportes aún. El store arranca vacío."}
           </p>
         </div>
       ) : (
@@ -76,27 +80,14 @@ export function ReportesTable({ rows }: ReportesTableProps) {
           <table className="w-full min-w-[720px] border-collapse text-left">
             <thead className="sticky top-0 z-10 border-b border-eco-gray-200 bg-eco-gray-50/95 font-sans text-caption font-semibold uppercase tracking-wide text-eco-gray-700 backdrop-blur">
               <tr>
-                <th scope="col" className="px-eco-4 py-eco-3">
-                  ID
-                </th>
-                <th scope="col" className="px-eco-4 py-eco-3">
-                  Tipo
-                </th>
-                <th scope="col" className="px-eco-4 py-eco-3">
-                  Estado
-                </th>
-                <th scope="col" className="px-eco-4 py-eco-3">
-                  Territorio
-                </th>
-                <th scope="col" className="px-eco-4 py-eco-3">
-                  Creado
-                </th>
-                <th scope="col" className="px-eco-4 py-eco-3">
-                  Reciclador
-                </th>
-                <th scope="col" className="px-eco-4 py-eco-3 min-w-[200px]">
-                  Descripción
-                </th>
+                <th scope="col" className="px-eco-4 py-eco-3">ID</th>
+                <th scope="col" className="px-eco-4 py-eco-3">Tipo</th>
+                <th scope="col" className="px-eco-4 py-eco-3">Estado</th>
+                <th scope="col" className="px-eco-4 py-eco-3">Material</th>
+                <th scope="col" className="px-eco-4 py-eco-3">Kg est.</th>
+                <th scope="col" className="px-eco-4 py-eco-3">Reciclador ID</th>
+                <th scope="col" className="px-eco-4 py-eco-3">Creado</th>
+                <th scope="col" className="px-eco-4 py-eco-3 min-w-[200px]">Descripción</th>
               </tr>
             </thead>
             <tbody>
@@ -105,20 +96,18 @@ export function ReportesTable({ rows }: ReportesTableProps) {
                   key={r.id}
                   className="border-b border-eco-gray-100 font-sans text-body-sm text-eco-gray-900 even:bg-eco-gray-50/30 last:border-0"
                 >
-                  <td className="whitespace-nowrap px-eco-4 py-eco-3 font-mono text-code text-eco-teal">{r.id}</td>
-                  <td className="px-eco-4 py-eco-3">
-                    <TipoLabel tipo={r.tipo} />
+                  <td className="whitespace-nowrap px-eco-4 py-eco-3 font-mono text-code text-eco-teal">#{r.id}</td>
+                  <td className="px-eco-4 py-eco-3"><TipoLabel tipo={r.tipo} /></td>
+                  <td className="px-eco-4 py-eco-3"><EstadoLabel estado={r.estado} /></td>
+                  <td className="px-eco-4 py-eco-3 capitalize text-eco-gray-700">{r.material ?? "—"}</td>
+                  <td className="px-eco-4 py-eco-3 font-mono text-eco-navy">
+                    {r.kg_estimados > 0 ? `${r.kg_estimados.toFixed(1)} kg` : "—"}
                   </td>
-                  <td className="px-eco-4 py-eco-3">
-                    <EstadoLabel estado={r.estado} />
+                  <td className="px-eco-4 py-eco-3 font-mono text-caption text-eco-gray-600">
+                    {r.reciclador_id !== null ? `#${r.reciclador_id}` : "—"}
                   </td>
-                  <td className="px-eco-4 py-eco-3 text-eco-gray-700">
-                    <span className="block text-eco-navy">{r.comuna}</span>
-                    <span className="text-caption text-eco-gray-500">{r.barrio}</span>
-                  </td>
-                  <td className="whitespace-nowrap px-eco-4 py-eco-3 text-eco-gray-600">{r.creado}</td>
-                  <td className="px-eco-4 py-eco-3 text-eco-gray-800">{r.reciclador ?? "—"}</td>
-                  <td className="px-eco-4 py-eco-3 text-eco-gray-600">{r.descripcion}</td>
+                  <td className="whitespace-nowrap px-eco-4 py-eco-3 text-eco-gray-600">{formatDate(r.created_at)}</td>
+                  <td className="max-w-[260px] truncate px-eco-4 py-eco-3 text-eco-gray-600">{r.descripcion ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

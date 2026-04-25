@@ -42,7 +42,7 @@ export function AdminLayout() {
   }, [mobileOpen, closeMobile]);
 
   return (
-    <div className="flex min-h-screen bg-eco-gray-50">
+    <div className="flex min-h-screen items-start bg-eco-gray-50">
       <a
         href="#contenido-principal"
         className="sr-only z-[100] rounded-eco-sm bg-eco-navy px-eco-3 py-2 text-eco-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
@@ -50,7 +50,7 @@ export function AdminLayout() {
         Ir al contenido
       </a>
 
-      <aside className="hidden w-sidebar shrink-0 flex-col bg-eco-navy text-eco-sage lg:flex">
+      <aside className="hidden w-sidebar shrink-0 flex-col bg-eco-navy text-eco-sage lg:flex lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
         <div className="px-4 pb-5 pt-6">
           <NavLink
             to="/"

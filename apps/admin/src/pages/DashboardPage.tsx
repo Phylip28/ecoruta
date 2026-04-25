@@ -12,24 +12,18 @@ import {
   OctagonAlert,
   Recycle,
   RefreshCcw,
-  Settings,
 } from "lucide-react";
 
 import { DashboardOverview } from "../components/admin/DashboardOverview";
 import { HeatmapFilterBar } from "../components/admin/HeatmapFilterBar";
 import { RecicladoresTable } from "../components/admin/RecicladoresTable";
 import { ReportesTable } from "../components/admin/ReportesTable";
-import { SettingsPanel } from "../components/admin/SettingsPanel";
 import { SolicitudesTable } from "../components/admin/SolicitudesTable";
 import { StatsPanel } from "../components/admin/StatsPanel";
 import { HeatmapList } from "../components/HeatmapList";
 import { MapaHeatmap } from "../components/MapaHeatmap";
-import { getHealth, getHeatmap, getImpacto, type HeatmapPoint, type Impacto } from "../core/api";
-import {
-  recicladoresDemo,
-  reportesDemo,
-  solicitudesDemo,
-} from "../data/adminDemoData";
+import { getHealth, getHeatmap, getImpacto, getReportes, type HeatmapPoint, type Impacto, type Reporte } from "../core/api";
+import { recicladoresDemo } from "../data/adminDemoData";
 
 export type DashboardNavId =
   | "dashboard"
@@ -37,8 +31,7 @@ export type DashboardNavId =
   | "reports"
   | "requests"
   | "recyclers"
-  | "stats"
-  | "settings";
+  | "stats";
 
 export type AdminOutletContext = {
   navActive: DashboardNavId;
@@ -52,7 +45,6 @@ export const navItems: { id: DashboardNavId; label: string; icon: typeof LayoutD
   { id: "requests", label: "Solicitudes", icon: Recycle },
   { id: "recyclers", label: "Recicladores", icon: HardHat },
   { id: "stats", label: "Estadísticas", icon: BarChart3 },
-  { id: "settings", label: "Configuración", icon: Settings },
 ];
 
 function DemoNotice() {
@@ -71,9 +63,11 @@ export function DashboardPage() {
   const { navActive } = useOutletContext<AdminOutletContext>();
   const [status, setStatus] = useState("verificando");
   const [loading, setLoading] = useState(false);
+  const [justRefreshed, setJustRefreshed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [heatmap, setHeatmap] = useState<HeatmapPoint[]>([]);
   const [impacto, setImpacto] = useState<Impacto | null>(null);
+  const [reportes, setReportes] = useState<Reporte[]>([]);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
   async function refreshAll() {
@@ -81,16 +75,20 @@ export function DashboardPage() {
     setError(null);
 
     try {
-      const [healthData, heatmapData, impactoData] = await Promise.all([
+      const [healthData, heatmapData, impactoData, reportesData] = await Promise.all([
         getHealth(),
         getHeatmap(),
         getImpacto(),
+        getReportes(),
       ]);
 
       setStatus(healthData.status);
       setHeatmap(heatmapData);
       setImpacto(impactoData);
+      setReportes(reportesData);
       setLastSynced(new Date());
+      setJustRefreshed(true);
+      setTimeout(() => setJustRefreshed(false), 1200);
     } catch (err) {
       setStatus("sin conexion");
       setError(err instanceof Error ? err.message : "Error inesperado");
@@ -114,8 +112,7 @@ export function DashboardPage() {
     return current?.label ?? "Dashboard";
   }, [navActive]);
 
-  const showRefresh =
-    navActive === "dashboard" || navActive === "heatmap" || navActive === "stats";
+  const showRefresh = navActive !== "recyclers";
 
   const lastSyncedLabel = useMemo(() => {
     if (!lastSynced) return "Aún no sincronizado";
@@ -144,15 +141,9 @@ export function DashboardPage() {
           </h1>
           <p className="mt-2 max-w-2xl font-sans text-body text-eco-gray-700">
             {navActive === "dashboard" ? (
-              <>
-                Resumen de mapa, tablas y análisis. Servicio: {statusLabel}.{" "}
-                {lastSynced ? `Última carga: ${lastSyncedLabel}.` : "Usá «Recargar datos» para sincronizar."}
-              </>
+              lastSynced ? `Última actualización: ${lastSyncedLabel}.` : "Cargando datos del backend…"
             ) : (
-              <>
-                Sección: {navItems.find((n) => n.id === navActive)?.label}. Servicio: {statusLabel}.{" "}
-                {lastSynced ? `Última carga: ${lastSyncedLabel}.` : "—"}
-              </>
+              navItems.find((n) => n.id === navActive)?.label ?? ""
             )}
           </p>
         </div>
@@ -161,10 +152,22 @@ export function DashboardPage() {
             type="button"
             onClick={() => void refreshAll()}
             disabled={loading}
-            className="inline-flex h-12 min-w-[140px] items-center justify-center gap-eco-3 rounded-eco-md bg-eco-teal px-5 font-sans text-label text-eco-white shadow-eco-md transition duration-eco-fast hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-[0.38]"
+            className={[
+              "group inline-flex h-12 min-w-[148px] items-center justify-center gap-eco-3 rounded-eco-md px-5 font-sans text-label shadow-eco-md",
+              "transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-[0.38]",
+              justRefreshed
+                ? "scale-105 bg-eco-lime text-eco-navy"
+                : "bg-eco-teal text-eco-white hover:brightness-110 active:scale-95",
+            ].join(" ")}
           >
-            <RefreshCcw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} aria-hidden />
-            Recargar datos
+            <RefreshCcw
+              className={[
+                "h-4 w-4 transition-transform",
+                loading ? "animate-spin" : justRefreshed ? "rotate-180 duration-300" : "duration-500 group-hover:rotate-180",
+              ].join(" ")}
+              aria-hidden
+            />
+            {loading ? "Actualizando…" : justRefreshed ? "¡Actualizado!" : "Recargar datos"}
           </button>
         ) : null}
       </section>
@@ -188,9 +191,10 @@ export function DashboardPage() {
         <DashboardOverview
           heatmap={heatmap}
           impacto={impacto}
+          reportes={reportes}
           backendOk={status === "ok"}
-          backendStatusText={statusLabel}
           showDataSkeleton={showDataSkeleton}
+          onRefresh={refreshAll}
         />
       ) : null}
 
@@ -251,17 +255,15 @@ export function DashboardPage() {
 
       {navActive === "reports" ? (
         <div className="space-y-4">
-          <DemoNotice />
-          <h2 className="font-display text-h3 text-eco-navy">Reportes (demostración)</h2>
-          <ReportesTable rows={reportesDemo} />
+          <h2 className="font-display text-h3 text-eco-navy">Todos los reportes</h2>
+          <ReportesTable rows={reportes} />
         </div>
       ) : null}
 
       {navActive === "requests" ? (
         <div className="space-y-4">
-          <DemoNotice />
-          <h2 className="font-display text-h3 text-eco-navy">Solicitudes de recolección (demostración)</h2>
-          <SolicitudesTable rows={solicitudesDemo} />
+          <h2 className="font-display text-h3 text-eco-navy">Solicitudes de recolección</h2>
+          <SolicitudesTable rows={reportes.filter((r) => r.tipo === "solicitud")} />
         </div>
       ) : null}
 
@@ -275,15 +277,9 @@ export function DashboardPage() {
 
       {navActive === "stats" ? (
         <div className="space-y-4">
-          <p className="max-w-3xl font-sans text-body-sm text-eco-gray-600">
-            Gráficos de barras (material) y serie de seguimiento; las tres tarjetas superiores son de referencia. El bloque inferior toma
-            el impacto por material del servicio cuando hay datos.
-          </p>
-          <StatsPanel impacto={impacto} />
+          <StatsPanel impacto={impacto} reportes={reportes} />
         </div>
       ) : null}
-
-      {navActive === "settings" ? <SettingsPanel /> : null}
     </div>
   );
 }

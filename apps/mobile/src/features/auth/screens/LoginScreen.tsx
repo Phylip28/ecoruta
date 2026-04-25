@@ -235,7 +235,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               {ctaLabel}
             </Button>
 
-            <Text style={styles.demoNote}>Modo demo — sin contraseña requerida</Text>
+            <Text style={styles.demoNote}>Elige tu rol para comenzar</Text>
           </View>
 
           <View style={styles.footer}>

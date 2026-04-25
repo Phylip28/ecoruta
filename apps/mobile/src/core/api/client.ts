@@ -61,3 +61,44 @@ export async function crearSolicitud(payload: SolicitudPayload): Promise<{ id: n
   if (!response.ok) return parseError(response);
   return response.json();
 }
+
+// Raw shape returned by GET /api/ciudadano/historial
+type ApiHistorialItem = {
+  id: string;
+  tipo: "emergencia" | "solicitud";
+  estado: "pendiente" | "en_camino" | "completado";
+  fecha: string;
+  descripcion: string | null;
+  material: "carton" | "vidrio" | "plastico" | "mixto" | null;
+  reciclador_nombre: string | null;
+  miniatura_uri: string | null;
+};
+
+export type HistorialItem = {
+  id: string;
+  tipo: "emergencia" | "solicitud";
+  estado: "pendiente" | "en_camino" | "completado";
+  fecha: string;
+  descripcion: string | null;
+  material: "carton" | "vidrio" | "plastico" | "mixto" | null;
+  recicladorNombre: string | null;
+  miniaturaUri: string | null;
+};
+
+export async function getHistorialCiudadano(): Promise<HistorialItem[]> {
+  const response = await fetch(`${env.apiUrl}/api/ciudadano/historial`, {
+    headers: buildHeaders(env.tokens.ciudadano),
+  });
+  if (!response.ok) return parseError(response);
+  const items = (await response.json()) as ApiHistorialItem[];
+  return items.map((item) => ({
+    id: item.id,
+    tipo: item.tipo,
+    estado: item.estado,
+    fecha: item.fecha,
+    descripcion: item.descripcion,
+    material: item.material,
+    recicladorNombre: item.reciclador_nombre,
+    miniaturaUri: item.miniatura_uri,
+  }));
+}

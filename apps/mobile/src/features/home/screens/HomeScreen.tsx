@@ -105,13 +105,13 @@ export function HomeScreen({ role, onLogout }: HomeScreenProps) {
           accessibilityLabel="Design system"
         />
 
-        {/* Logout */}
+        {/* Logout / back to profile */}
         <Appbar.Action
-          icon="logout"
+          icon="arrow-left"
           color={Colors.gray700}
           size={21}
           onPress={onLogout}
-          accessibilityLabel="Cerrar sesión"
+          accessibilityLabel="Volver a elegir perfil"
         />
       </View>
 

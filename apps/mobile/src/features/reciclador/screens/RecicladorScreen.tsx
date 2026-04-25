@@ -249,6 +249,24 @@ export function RecicladorScreen({ onFeedback }: RecicladorScreenProps = {}) {
             recicladorLat={numeroSeguro(latitud, env.mobile.latitudInicial)}
             recicladorLng={numeroSeguro(longitud, env.mobile.longitudInicial)}
           />
+          <View style={styles.mapLegend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Colors.danger }]} />
+              <Text style={styles.legendText}>Emergencia</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Colors.lime }]} />
+              <Text style={styles.legendText}>Solicitud</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: "#7C3AED" }]} />
+              <Text style={styles.legendText}>En camino</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Colors.teal }]} />
+              <Text style={styles.legendText}>Tú</Text>
+            </View>
+          </View>
         </View>
 
         {/* ── Ruta activa FE-06 (ActiveRoutePanel) ── */}
@@ -459,6 +477,17 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
   },
   routePillText: { fontFamily: FontFamily.dmSans700, fontSize: 11, color: Colors.white },
+
+  mapLegend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.s3,
+    paddingTop: Spacing.s2,
+    paddingHorizontal: Spacing.s1,
+  },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendText: { fontFamily: FontFamily.dmSans500, fontSize: 11, color: Colors.gray700 },
 
   // ── Solicitud activa ──
   activeSurface: {

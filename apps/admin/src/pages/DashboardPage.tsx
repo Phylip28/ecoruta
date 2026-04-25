@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { DashboardOverview } from "../components/admin/DashboardOverview";
+import { HeatmapFilterBar } from "../components/admin/HeatmapFilterBar";
 import { RecicladoresTable } from "../components/admin/RecicladoresTable";
 import { ReportesTable } from "../components/admin/ReportesTable";
 import { SettingsPanel } from "../components/admin/SettingsPanel";
@@ -121,8 +122,20 @@ export function DashboardPage() {
     return lastSynced.toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
   }, [lastSynced]);
 
+  const showDataSkeleton = !lastSynced && (status === "verificando" || loading);
+
   return (
-    <div className="mx-auto max-w-admin space-y-6">
+    <div className="relative mx-auto max-w-admin space-y-6">
+      {loading ? (
+        <div
+          className="pointer-events-none fixed left-0 right-0 top-0 z-30 h-0.5 overflow-hidden bg-eco-gray-200/80"
+          role="progressbar"
+          aria-label="Cargando datos"
+          aria-busy="true"
+        >
+          <div className="h-full w-full animate-pulse bg-gradient-to-r from-eco-teal/30 via-eco-teal to-eco-teal/30" />
+        </div>
+      ) : null}
       <section className="flex flex-col gap-4 rounded-eco-xl border border-eco-gray-200 bg-eco-white p-6 shadow-eco-sm md:flex-row md:items-start md:justify-between">
         <div>
           <p className="font-sans text-label uppercase tracking-wide text-eco-teal">Panel operativo</p>
@@ -177,6 +190,7 @@ export function DashboardPage() {
           impacto={impacto}
           backendOk={status === "ok"}
           backendStatusText={statusLabel}
+          showDataSkeleton={showDataSkeleton}
         />
       ) : null}
 
@@ -188,10 +202,13 @@ export function DashboardPage() {
                 <Flame className="h-5 w-5 text-eco-danger" aria-hidden />
                 <h2 className="font-display text-h3 text-eco-navy">Mapa de calor geoespacial</h2>
               </div>
-              <div className="flex flex-wrap gap-2 rounded-eco-md bg-eco-gray-50 px-eco-3 py-2 font-sans text-caption text-eco-gray-700">
-                <span className="rounded-full bg-[rgba(0,92,83,0.15)] px-3 py-1 font-medium text-eco-teal">Tipo: todos</span>
-                <span className="rounded-full bg-eco-gray-100 px-3 py-1 text-eco-gray-500">Filtros (MVP)</span>
-              </div>
+            </div>
+            <p className="mb-4 max-w-3xl font-sans text-body-sm text-eco-gray-600">
+              Densidad aproximada de reportes; comprobá la leyenda en el mapa. Usá criterios abajo (vista) para alinear a futuro con el
+              API paramétrico.
+            </p>
+            <div className="mb-4">
+              <HeatmapFilterBar />
             </div>
             <MapaHeatmap points={heatmap} />
             <p className="mt-3 font-sans text-caption text-eco-gray-500">

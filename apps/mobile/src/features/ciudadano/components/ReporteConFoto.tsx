@@ -3,7 +3,7 @@ import { Image, Pressable, StyleSheet, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import { ActivityIndicator, Surface, Text, TextInput } from "react-native-paper";
+import { ActivityIndicator, Button, Surface, Text, TextInput } from "react-native-paper";
 
 import { crearReporte } from "../../../core/api/client";
 import { env } from "../../../config/env";
@@ -65,7 +65,12 @@ export function ReporteConFoto({ onFeedback }: ReporteConFotoProps) {
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      onFeedback("Necesitamos permiso para acceder a la cámara.", "advertencia");
+      onFeedback(
+        origen === "camara"
+          ? "Necesitamos permiso para usar la cámara."
+          : "Necesitamos permiso para acceder a la galería.",
+        "advertencia",
+      );
       return;
     }
     const result = origen === "camara"
@@ -155,22 +160,32 @@ export function ReporteConFoto({ onFeedback }: ReporteConFotoProps) {
             </View>
           ) : (
             <View style={styles.photoButtons}>
-              <Pressable
-                style={({ pressed }) => [styles.photoBtn, pressed && { opacity: 0.8 }]}
+              <Button
+                mode="outlined"
+                icon={EcoIcons.camera}
                 onPress={() => void elegirFoto("camara")}
-                accessibilityLabel="Tomar foto con cámara"
+                textColor={Colors.teal}
+                buttonColor={Colors.white}
+                style={styles.photoBtn}
+                contentStyle={styles.photoBtnContent}
+                labelStyle={styles.photoBtnLabel}
+                accessibilityLabel="Tomar foto con la cámara"
               >
-                <MaterialCommunityIcons name="camera" size={22} color={Colors.teal} />
-                <Text style={styles.photoBtnLabel}>Cámara</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.photoBtn, pressed && { opacity: 0.8 }]}
+                Cámara
+              </Button>
+              <Button
+                mode="outlined"
+                icon="image"
                 onPress={() => void elegirFoto("galeria")}
-                accessibilityLabel="Elegir foto de galería"
+                textColor={Colors.teal}
+                buttonColor={Colors.white}
+                style={styles.photoBtn}
+                contentStyle={styles.photoBtnContent}
+                labelStyle={styles.photoBtnLabel}
+                accessibilityLabel="Elegir foto de la galería"
               >
-                <MaterialCommunityIcons name="image-multiple-outline" size={22} color={Colors.teal} />
-                <Text style={styles.photoBtnLabel}>Galería</Text>
-              </Pressable>
+                Galería
+              </Button>
             </View>
           )}
 
@@ -368,21 +383,18 @@ const styles = StyleSheet.create({
   },
   photoBtn: {
     flex: 1,
+    borderRadius: BorderRadius.lg,
+    borderColor: Colors.teal,
+  },
+  photoBtnContent: {
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: Spacing.s2,
-    paddingVertical: Spacing.s3,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1.5,
-    borderColor: `${Colors.teal}50`,
-    backgroundColor: `${Colors.teal}08`,
-    minHeight: 48,
   },
   photoBtnLabel: {
     fontFamily: FontFamily.dmSans700,
-    fontSize: 14,
-    color: Colors.teal,
+    fontSize: 15,
   },
   photoPreviewWrap: {
     position: "relative",

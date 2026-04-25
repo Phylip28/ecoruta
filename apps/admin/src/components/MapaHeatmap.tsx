@@ -3,8 +3,11 @@ import L from "leaflet";
 import { useEffect, useMemo } from "react";
 import { CircleMarker, MapContainer, TileLayer, Tooltip } from "react-leaflet";
 
+import { Map as MapIcon } from "lucide-react";
+
 import { heatColorByWeight } from "../design-system";
 import type { HeatmapPoint } from "../core/api";
+import { EmptyState } from "./ui/EmptyState";
 
 // Fix Leaflet's broken default icon path when bundled with Vite
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,8 +36,12 @@ export function MapaHeatmap({ points }: Props) {
 
   if (points.length === 0) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-eco-lg border border-dashed border-eco-gray-300 bg-eco-white font-sans text-body-sm text-eco-gray-500">
-        Sin puntos activos para el mapa de calor.
+      <div className="h-[min(420px,50vh)] min-h-[200px]">
+        <EmptyState
+          icon={MapIcon}
+          title="Sin densidad en el mapa aún"
+          description="Cuando haya reportes con coordenadas, verás círculos con intensidad por barrio. Comprobá la conexión o generá datos de prueba en el backend."
+        />
       </div>
     );
   }
@@ -44,7 +51,7 @@ export function MapaHeatmap({ points }: Props) {
       <MapContainer
         center={center}
         zoom={13}
-        style={{ height: "360px", width: "100%" }}
+        style={{ height: "min(420px, 50vh)", minHeight: "360px", width: "100%" }}
         scrollWheelZoom
       >
         <TileLayer

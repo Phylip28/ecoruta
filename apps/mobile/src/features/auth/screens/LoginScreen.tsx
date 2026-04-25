@@ -9,11 +9,22 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { ActivityIndicator } from "react-native-paper";
+import { Button } from "react-native-paper";
 
 import { EcoLogo } from "../../../components/EcoLogo";
-import { BorderRadius, Colors, FontFamily, Shadows, Spacing, Typography } from "../../../design-system";
+import { BorderRadius, Colors, FontFamily, Shadows, Spacing } from "../../../design-system";
 import type { UserRole } from "../context/AuthContext";
+
+/** Colores sólidos (hex) para el CTA: evitan que NativeWind / tema aplasten el contraste. */
+const CTA = {
+  ciudadanoBg: "#DBF227",
+  ciudadanoFg: "#042940",
+  recicladorBg: "#005C53",
+  recicladorFg: "#FFFFFF",
+  invitacionBg: "rgba(255,255,255,0.22)",
+  invitacionFg: "#FFFFFF",
+  invitacionBorder: "rgba(255,255,255,0.55)",
+} as const;
 
 type RoleOption = {
   role: UserRole;
@@ -32,21 +43,30 @@ const ROLES: RoleOption[] = [
     icon: "account-circle-outline",
     title: "Ciudadano",
     subtitle: "Reporta y solicita",
-    description: "Reporta puntos críticos, solicita recolección de reciclables y sigue el estado de tus solicitudes.",
+    description:
+      "Reporta puntos críticos con foto, solicita recolección por material y sigue el estado de tus solicitudes.",
     accentColor: Colors.lime,
-    bgColor: "rgba(159,193,49,0.10)",
-    borderColor: "rgba(159,193,49,0.35)",
+    bgColor: "rgba(159,193,49,0.14)",
+    borderColor: "rgba(159,193,49,0.45)",
   },
   {
     role: "reciclador",
     icon: "recycle",
     title: "Reciclador",
     subtitle: "Gestiona rutas",
-    description: "Visualiza solicitudes pendientes, optimiza tu ruta de recolección y registra el impacto ambiental.",
+    description:
+      "Mapa de pendientes, ruta optimizada, estados con feedback y resumen de impacto ambiental.",
     accentColor: Colors.teal,
-    bgColor: "rgba(0,92,83,0.10)",
-    borderColor: "rgba(0,92,83,0.35)",
+    bgColor: "rgba(0,92,83,0.14)",
+    borderColor: "rgba(0,92,83,0.45)",
   },
+];
+
+const FEATURE_CHIPS: { icon: string; label: string }[] = [
+  { icon: "camera-outline", label: "Foto + GPS" },
+  { icon: "shape-outline", label: "Materiales" },
+  { icon: "map-marker-radius", label: "Mapa y ruta" },
+  { icon: "chart-line", label: "Impacto" },
 ];
 
 type LoginScreenProps = {
@@ -60,224 +80,252 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   async function handleContinue() {
     if (!selected) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
+    await new Promise((r) => setTimeout(r, 500));
     setLoading(false);
     onLogin(selected);
   }
 
+  const ctaLabel = !selected ? "Selecciona un rol arriba" : "Continuar";
+  const buttonColor = !selected
+    ? CTA.invitacionBg
+    : selected === "ciudadano"
+      ? CTA.ciudadanoBg
+      : CTA.recicladorBg;
+  const textColor = !selected
+    ? CTA.invitacionFg
+    : selected === "ciudadano"
+      ? CTA.ciudadanoFg
+      : CTA.recicladorFg;
+
   return (
     <LinearGradient
-      colors={[Colors.navy, "#063A56", "#042940"]}
+      colors={["#021a28", "#042940", "#063A56"]}
       start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      end={{ x: 0.2, y: 1 }}
       style={styles.gradient}
     >
-      <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        {/* ── Marca ── */}
-        <View style={styles.brandSection}>
-          <EcoLogo height={72} width={200} />
-          <View style={styles.taglineRow}>
-            <View style={styles.taglineDot} />
-            <Text style={styles.tagline}>Reciclaje inteligente para Medellín</Text>
+      <SafeAreaView style={styles.safe}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <View style={styles.brandSection}>
+            <View style={styles.logoBadge}>
+              <EcoLogo height={80} width={210} />
+            </View>
+            <View style={styles.taglineRow}>
+              <View style={styles.taglineDot} />
+              <Text style={styles.tagline}>Reciclaje inteligente para Medellín</Text>
+            </View>
           </View>
-        </View>
 
-        {/* ── Headline ── */}
-        <View style={styles.headlineSection}>
-          <Text style={styles.headline}>¿Cómo{"\n"}participas hoy?</Text>
-          <Text style={styles.headlineSub}>
-            Selecciona tu rol para acceder a tu experiencia personalizada
-          </Text>
-        </View>
+          <View style={styles.headlineSection}>
+            <Text style={styles.headline}>¿Cómo participas hoy?</Text>
+            <Text style={styles.headlineSub}>
+              Elige tu rol para ver las herramientas de EcoRuta adaptadas a ti.
+            </Text>
+          </View>
 
-        {/* ── Tarjetas de rol ── */}
-        <View style={styles.cardsSection}>
-          {ROLES.map((opt) => {
-            const isSelected = selected === opt.role;
-            return (
-              <Pressable
-                key={opt.role}
-                onPress={() => setSelected(opt.role)}
-                style={({ pressed }) => [
-                  styles.roleCard,
-                  { borderColor: isSelected ? opt.accentColor : "rgba(255,255,255,0.10)" },
-                  { backgroundColor: isSelected ? opt.bgColor : "rgba(255,255,255,0.05)" },
-                  isSelected && styles.roleCardSelected,
-                  pressed && { opacity: 0.88 },
-                ]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: isSelected }}
-                accessibilityLabel={`Seleccionar rol ${opt.title}: ${opt.description}`}
-              >
-                {/* Indicador de selección */}
-                <View style={[
-                  styles.selectIndicator,
-                  { borderColor: isSelected ? opt.accentColor : "rgba(255,255,255,0.25)" },
-                  isSelected && { backgroundColor: opt.accentColor },
-                ]}>
-                  {isSelected && (
-                    <MaterialCommunityIcons name="check" size={12} color={Colors.navy} />
-                  )}
-                </View>
-
-                {/* Ícono del rol */}
-                <View style={[styles.roleIconWrap, { backgroundColor: isSelected ? opt.bgColor : "rgba(255,255,255,0.07)" }]}>
-                  <MaterialCommunityIcons
-                    name={opt.icon as any}
-                    size={36}
-                    color={isSelected ? opt.accentColor : "rgba(255,255,255,0.55)"}
-                  />
-                </View>
-
-                {/* Texto */}
-                <View style={styles.roleText}>
-                  <Text style={[styles.roleTitle, isSelected && { color: opt.accentColor }]}>
-                    {opt.title}
-                  </Text>
-                  <Text style={styles.roleSubtitle}>{opt.subtitle}</Text>
-                  <Text style={styles.roleDesc}>{opt.description}</Text>
-                </View>
-
-                {/* Flecha de selección */}
-                {isSelected && (
-                  <MaterialCommunityIcons
-                    name="chevron-right"
-                    size={20}
-                    color={opt.accentColor}
-                    style={styles.roleChevron}
-                  />
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* ── CTA ── */}
-        <View style={styles.ctaSection}>
-          <Pressable
-            onPress={() => void handleContinue()}
-            disabled={!selected || loading}
-            style={({ pressed }) => [
-              styles.ctaButton,
-              !selected && styles.ctaButtonDisabled,
-              pressed && selected && { opacity: 0.9 },
-              selected === "ciudadano" && styles.ctaButtonLime,
-              selected === "reciclador" && styles.ctaButtonTeal,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Continuar con el rol seleccionado"
-            accessibilityState={{ disabled: !selected || loading }}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
           >
-            {loading ? (
-              <ActivityIndicator
-                size="small"
-                color={selected === "reciclador" ? Colors.white : Colors.navy}
-              />
-            ) : (
-              <>
-                <MaterialCommunityIcons
-                  name="arrow-right-circle"
-                  size={24}
-                  color={
-                    !selected
-                      ? "rgba(255,255,255,0.92)"
-                      : selected === "reciclador"
-                        ? Colors.white
-                        : Colors.navy
-                  }
-                />
-                <Text
-                  style={[
-                    styles.ctaLabel,
-                    !selected && styles.ctaLabelDisabled,
-                    selected === "reciclador" && styles.ctaLabelOnTeal,
+            {FEATURE_CHIPS.map((c) => (
+              <View key={c.label} style={styles.chip}>
+                <MaterialCommunityIcons name={c.icon as never} size={14} color={Colors.lime} />
+                <Text style={styles.chipText}>{c.label}</Text>
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={styles.cardsSection}>
+            {ROLES.map((opt) => {
+              const isSelected = selected === opt.role;
+              return (
+                <Pressable
+                  key={opt.role}
+                  onPress={() => setSelected(opt.role)}
+                  style={({ pressed }) => [
+                    styles.roleCard,
+                    { borderColor: isSelected ? opt.accentColor : "rgba(255,255,255,0.14)" },
+                    { backgroundColor: isSelected ? opt.bgColor : "rgba(255,255,255,0.06)" },
+                    isSelected && styles.roleCardSelected,
+                    pressed && { opacity: 0.9 },
                   ]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`Rol ${opt.title}. ${opt.description}`}
                 >
-                  Continuar
-                </Text>
-              </>
-            )}
-          </Pressable>
+                  <View
+                    style={[
+                      styles.selectIndicator,
+                      { borderColor: isSelected ? opt.accentColor : "rgba(255,255,255,0.35)" },
+                      isSelected && { backgroundColor: opt.accentColor },
+                    ]}
+                  >
+                    {isSelected && (
+                      <MaterialCommunityIcons name="check" size={12} color={Colors.navy} />
+                    )}
+                  </View>
 
-          <Text style={styles.demoNote}>
-            Modo demo — sin contraseña requerida
-          </Text>
-        </View>
+                  <View
+                    style={[
+                      styles.roleIconWrap,
+                      {
+                        backgroundColor: isSelected ? `${opt.accentColor}22` : "rgba(255,255,255,0.08)",
+                      },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={opt.icon as never}
+                      size={36}
+                      color={isSelected ? opt.accentColor : "rgba(255,255,255,0.65)"}
+                    />
+                  </View>
 
-        {/* ── Footer ── */}
-        <View style={styles.footer}>
-          <View style={styles.footerDivider} />
-          <Text style={styles.footerText}>EcoRuta Inteligente · Hackatón V2.0 · 2026</Text>
-        </View>
-      </ScrollView>
+                  <View style={styles.roleText}>
+                    <Text style={[styles.roleTitle, isSelected && { color: opt.accentColor }]}>
+                      {opt.title}
+                    </Text>
+                    <Text style={styles.roleSubtitle}>{opt.subtitle}</Text>
+                    <Text style={styles.roleDesc}>{opt.description}</Text>
+                  </View>
+
+                  {isSelected && (
+                    <MaterialCommunityIcons
+                      name="chevron-right"
+                      size={22}
+                      color={opt.accentColor}
+                      style={styles.roleChevron}
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.ctaSection}>
+            <Button
+              mode="contained"
+              icon="arrow-right"
+              onPress={() => {
+                if (!selected) return;
+                void handleContinue();
+              }}
+              disabled={loading}
+              loading={loading}
+              buttonColor={buttonColor}
+              textColor={textColor}
+              style={[
+                styles.ctaButton,
+                !selected && {
+                  borderWidth: 1.5,
+                  borderColor: CTA.invitacionBorder,
+                },
+              ]}
+              contentStyle={styles.ctaContent}
+              labelStyle={styles.ctaLabel}
+              accessibilityLabel={ctaLabel}
+              accessibilityHint={
+                !selected ? "Primero elige Ciudadano o Reciclador en las tarjetas superiores." : undefined
+              }
+            >
+              {ctaLabel}
+            </Button>
+
+            <Text style={styles.demoNote}>Modo demo — sin contraseña requerida</Text>
+          </View>
+
+          <View style={styles.footer}>
+            <View style={styles.footerDivider} />
+            <Text style={styles.footerText}>EcoRuta Inteligente · Hackatón V2.0 · 2026</Text>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
+  gradient: { flex: 1 },
+  safe: { flex: 1 },
   scroll: {
     paddingHorizontal: Spacing.s5,
-    paddingTop: Spacing.s8,
-    paddingBottom: Spacing.s10,
-    gap: Spacing.s6,
+    paddingTop: Spacing.s6,
+    paddingBottom: Spacing.s12,
+    gap: Spacing.s5,
   },
 
-  // ── Marca ──
   brandSection: {
     alignItems: "center",
-    gap: Spacing.s2,
+    gap: Spacing.s3,
+  },
+  logoBadge: {
+    backgroundColor: "rgba(255,255,255,0.96)",
+    paddingVertical: Spacing.s3,
+    paddingHorizontal: Spacing.s5,
+    borderRadius: BorderRadius.xl,
+    ...Shadows.lg,
   },
   taglineRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.s2,
-    marginTop: Spacing.s1,
   },
   taglineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: Colors.lime,
   },
   tagline: {
-    fontFamily: FontFamily.dmSans400,
-    fontSize: 13,
-    color: "rgba(255,255,255,0.50)",
+    fontFamily: FontFamily.dmSans500,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.72)",
     letterSpacing: 0.2,
   },
 
-  // ── Headline ──
-  headlineSection: {
-    gap: Spacing.s2,
-    marginTop: Spacing.s2,
-  },
+  headlineSection: { gap: Spacing.s2 },
   headline: {
     fontFamily: FontFamily.sora800,
-    fontSize: 34,
-    lineHeight: 42,
+    fontSize: 32,
+    lineHeight: 40,
     color: Colors.white,
     letterSpacing: -0.5,
   },
   headlineSub: {
     fontFamily: FontFamily.dmSans400,
-    fontSize: 15,
-    lineHeight: 22,
-    color: "rgba(255,255,255,0.55)",
+    fontSize: 16,
+    lineHeight: 24,
+    color: "rgba(255,255,255,0.62)",
   },
 
-  // ── Cards ──
-  cardsSection: {
-    gap: Spacing.s3,
+  chipRow: {
+    flexDirection: "row",
+    gap: Spacing.s2,
+    paddingVertical: Spacing.s1,
+    alignItems: "center",
   },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: Spacing.s3,
+    paddingVertical: Spacing.s2,
+    borderRadius: BorderRadius.full,
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+  },
+  chipText: {
+    fontFamily: FontFamily.dmSans700,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.88)",
+  },
+
+  cardsSection: { gap: Spacing.s3 },
   roleCard: {
     borderRadius: BorderRadius.xl,
     borderWidth: 1.5,
@@ -285,17 +333,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing.s3,
-    minHeight: 96,
+    minHeight: 108,
     position: "relative",
-    ...Shadows.sm,
   },
   roleCardSelected: {
     ...Shadows.md,
   },
   selectIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     position: "absolute",
     top: Spacing.s3,
@@ -311,30 +358,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  roleText: {
-    flex: 1,
-    gap: 3,
-    paddingRight: Spacing.s5,
-  },
+  roleText: { flex: 1, gap: 4, paddingRight: Spacing.s6 },
   roleTitle: {
     fontFamily: FontFamily.sora700,
-    fontSize: 17,
+    fontSize: 18,
     color: Colors.white,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   roleSubtitle: {
-    fontFamily: FontFamily.dmSans500,
-    fontSize: 12,
-    color: "rgba(255,255,255,0.45)",
+    fontFamily: FontFamily.dmSans700,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.55)",
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.7,
   },
   roleDesc: {
     fontFamily: FontFamily.dmSans400,
-    fontSize: 13,
-    lineHeight: 19,
-    color: "rgba(255,255,255,0.60)",
-    marginTop: 2,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "rgba(255,255,255,0.72)",
+    marginTop: 4,
   },
   roleChevron: {
     position: "absolute",
@@ -342,72 +385,43 @@ const styles = StyleSheet.create({
     right: Spacing.s3,
   },
 
-  // ── CTA ──
-  ctaSection: {
-    gap: Spacing.s3,
-    alignItems: "center",
-  },
+  ctaSection: { gap: Spacing.s3, alignItems: "stretch", marginTop: Spacing.s2 },
   ctaButton: {
-    width: "100%",
-    minHeight: 54,
-    paddingVertical: Spacing.s3,
-    paddingHorizontal: Spacing.s5,
     borderRadius: BorderRadius.lg,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  ctaContent: {
+    minHeight: 54,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: Spacing.s3,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.35)",
-  },
-  ctaButtonDisabled: {
-    backgroundColor: "rgba(255,255,255,0.10)",
-    borderColor: "rgba(255,255,255,0.45)",
-  },
-  ctaButtonLime: {
-    backgroundColor: Colors.lime,
-    borderColor: Colors.lime,
-    ...Shadows.md,
-  },
-  ctaButtonTeal: {
-    backgroundColor: Colors.teal,
-    borderColor: Colors.teal,
-    ...Shadows.md,
   },
   ctaLabel: {
     fontFamily: FontFamily.dmSans700,
     fontSize: 17,
-    color: Colors.navy,
     letterSpacing: 0.3,
-  },
-  ctaLabelDisabled: {
-    color: "rgba(255,255,255,0.95)",
-  },
-  ctaLabelOnTeal: {
-    color: Colors.white,
   },
   demoNote: {
     fontFamily: FontFamily.dmSans400,
-    fontSize: 12,
-    color: "rgba(255,255,255,0.45)",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.48)",
+    textAlign: "center",
   },
 
-  // ── Footer ──
-  footer: {
-    alignItems: "center",
-    gap: Spacing.s3,
-    marginTop: Spacing.s2,
-  },
+  footer: { alignItems: "center", gap: Spacing.s3, marginTop: Spacing.s2 },
   footerDivider: {
-    width: 40,
+    width: 48,
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.18)",
   },
   footerText: {
     fontFamily: FontFamily.dmSans400,
-    fontSize: 11,
-    color: "rgba(255,255,255,0.20)",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.38)",
     textAlign: "center",
   },
 });

@@ -16,6 +16,7 @@ import {
   touchTarget,
 } from "../../../design-system";
 import type { Material } from "../../reciclador/types";
+import { CiudadanoHeroCard } from "../components/CiudadanoHeroCard";
 import { HistorialCiudadano } from "../components/HistorialCiudadano";
 import { MaterialSelectorGrid } from "../components/MaterialSelectorGrid";
 import { ReporteConFoto } from "../components/ReporteConFoto";
@@ -120,6 +121,8 @@ export function CiudadanoHomeScreen({ onFeedback }: CiudadanoHomeScreenProps) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <CiudadanoHeroCard />
+
           {/* Reporte con foto */}
           <ReporteConFoto onFeedback={onFeedback} />
 

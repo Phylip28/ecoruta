@@ -37,14 +37,18 @@ export function MaterialChipsRow({ options, selectedId, onSelect }: MaterialChip
               alignItems: "center",
               gap: Spacing.s2,
               paddingHorizontal: Spacing.s4,
-              paddingVertical: Spacing.s2,
+              paddingVertical: Spacing.s3,
               borderRadius: BorderRadius.full,
               backgroundColor: selected ? Colors.teal : Colors.gray100,
               borderWidth: selected ? 0 : 1,
-              borderColor: Colors.gray300,
+              borderColor: selected ? "transparent" : Colors.gray300,
             }}
           >
-            <MaterialCommunityIcons name={opt.icon} size={IconSize.sm} color={selected ? Colors.white : Colors.gray700} />
+            <MaterialCommunityIcons
+              name={opt.icon}
+              size={IconSize.lg}
+              color={selected ? Colors.white : Colors.gray700}
+            />
             <Text style={[Typography.labelMd, { color: selected ? Colors.white : Colors.gray700 }]}>{opt.label}</Text>
           </Pressable>
         );

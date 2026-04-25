@@ -20,12 +20,15 @@ import {
   solicitudesDemo,
 } from "../../data/adminDemoData";
 import { tableEstadoBadges, tableTypeBadges } from "../../design-system";
+import { CardGridSkeleton, MetricRowSkeleton, SkeletonBlock } from "../ui/Skeleton";
 
 type DashboardOverviewProps = {
   heatmap: HeatmapPoint[];
   impacto: Impacto | null;
   backendOk: boolean;
   backendStatusText: string;
+  /** Carga inicial de datos (API aún no respondió) */
+  showDataSkeleton: boolean;
 };
 
 function QuickCard({
@@ -116,7 +119,13 @@ function ActivityRow({ label, value, tone }: { label: string; value: string; ton
   );
 }
 
-export function DashboardOverview({ heatmap, impacto, backendOk, backendStatusText }: DashboardOverviewProps) {
+export function DashboardOverview({
+  heatmap,
+  impacto,
+  backendOk,
+  backendStatusText,
+  showDataSkeleton,
+}: DashboardOverviewProps) {
   const abiertasReporte = reportesDemo.filter(
     (r) => r.estado === "pendiente" || r.estado === "en_camino",
   ).length;
@@ -128,6 +137,41 @@ export function DashboardOverview({ heatmap, impacto, backendOk, backendStatusTe
     .sort((a, b) => b.creado.localeCompare(a.creado))
     .slice(0, 3);
   const topHeat = heatmap.length ? [...heatmap].sort((a, b) => b.peso - a.peso).slice(0, 3) : [];
+
+  if (showDataSkeleton) {
+    return (
+      <div className="space-y-eco-6" aria-busy="true" aria-label="Cargando resumen del panel">
+        <div className="space-y-3 rounded-eco-lg border border-eco-gray-100 p-4">
+          <SkeletonBlock className="h-4 w-1/2 max-w-xs" />
+          <SkeletonBlock className="h-3 w-full" />
+        </div>
+        <div>
+          <div className="h-5 w-40 max-w-full rounded bg-eco-gray-200" />
+          <p className="mb-2 mt-2 h-3 w-2/3 rounded bg-eco-gray-100" />
+          <MetricRowSkeleton />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="h-64 rounded-eco-xl border border-eco-gray-100 p-4">
+            <SkeletonBlock className="h-5 w-1/2" />
+            <SkeletonBlock className="mt-3 h-3 w-full" />
+            <SkeletonBlock className="mt-2 h-3 w-4/5" />
+            <SkeletonBlock className="mt-4 h-10 w-full" />
+            <SkeletonBlock className="mt-2 h-10 w-full" />
+          </div>
+          <div className="h-64 rounded-eco-xl border border-eco-gray-100 p-4">
+            <SkeletonBlock className="h-5 w-1/2" />
+            <SkeletonBlock className="mt-6 h-8 w-full" />
+            <SkeletonBlock className="mt-2 h-8 w-full" />
+            <SkeletonBlock className="mt-2 h-8 w-full" />
+          </div>
+        </div>
+        <div>
+          <div className="h-5 w-40 rounded bg-eco-gray-200" />
+          <CardGridSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-eco-6">
@@ -214,7 +258,7 @@ export function DashboardOverview({ heatmap, impacto, backendOk, backendStatusTe
                   className="flex items-center justify-between rounded-eco-md border border-eco-gray-100 bg-eco-gray-50 px-3 py-2 font-sans text-body-sm"
                 >
                   <span className="text-eco-gray-700">Punto {i + 1}</span>
-                  <span className="font-mono text-metric-sm text-eco-navy">peso {p.peso}</span>
+                  <span className="font-mono text-metric-md text-eco-navy">peso {p.peso}</span>
                 </li>
               ))}
             </ul>

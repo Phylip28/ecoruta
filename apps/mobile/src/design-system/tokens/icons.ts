@@ -21,6 +21,7 @@ export const EcoIcons = {
   materialPlastic: "bottle-soda",
   materialGlass: "glass-fragile",
   materialMetal: "wrench",
+  materialMixto: "recycle-variant",
   stats: "chart-bar",
   notification: "bell-badge",
 } as const;

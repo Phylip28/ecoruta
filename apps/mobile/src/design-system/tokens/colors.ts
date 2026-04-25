@@ -32,3 +32,15 @@ export function navyAlpha(opacity: number): string {
 export function tealAlpha(opacity: number): string {
   return `rgba(0,92,83,${opacity})`;
 }
+
+/** Badges — alineado con `apps/admin/src/design-system/tokens/colors.ts` §9.4 */
+export const tableTypeBadges = {
+  emergencia: { bg: "#FDECEA", text: "#D94F3D" },
+  solicitud: { bg: "#E6F4F1", text: "#005C53" },
+} as const;
+
+export const tableEstadoBadges = {
+  pendiente: { bg: "#FEFDE7", text: "#8A7600" },
+  en_camino: { bg: "#EDF7E1", text: "#4A6B1A" },
+  completado: { bg: "#E6F4F1", text: "#005C53" },
+} as const;

@@ -17,9 +17,32 @@ import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ActivityIndicator, Text, View } from "react-native";
 
+import { EcoLogo } from "./src/components/EcoLogo";
 import { Colors } from "./src/design-system";
+import { AuthProvider, useAuth } from "./src/features/auth/context/AuthContext";
+import { LoginScreen } from "./src/features/auth/screens/LoginScreen";
 import { HomeScreen } from "./src/features/home/screens/HomeScreen";
 import { ecoTheme } from "./src/theme/paperTheme";
+
+function RootNavigator() {
+  const { role, login, logout } = useAuth();
+
+  if (!role) {
+    return (
+      <>
+        <StatusBar style="light" />
+        <LoginScreen onLogin={login} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <StatusBar style="dark" />
+      <HomeScreen role={role} onLogout={logout} />
+    </>
+  );
+}
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -35,14 +58,19 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <PaperProvider theme={ecoTheme}>
-        <StatusBar style="dark" />
         {!fontsLoaded ? (
-          <View className="flex-1 items-center justify-center bg-eco-white">
-            <ActivityIndicator size="large" color={Colors.teal} />
-            <Text className="mt-3 font-sans text-base text-eco-gray-700">Cargando EcoRuta…</Text>
-          </View>
+          <>
+            <StatusBar style="light" />
+            <View className="flex-1 items-center justify-center bg-black">
+              <EcoLogo height={200} width={240} />
+              <ActivityIndicator className="mt-6" size="large" color={Colors.lime} />
+              <Text className="mt-3 text-base text-eco-gray-200">Cargando EcoRuta…</Text>
+            </View>
+          </>
         ) : (
-          <HomeScreen />
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
         )}
       </PaperProvider>
     </SafeAreaProvider>

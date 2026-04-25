@@ -1,3 +1,5 @@
+import { NavLink } from "react-router-dom";
+
 import { AccessibilityBlock, MotionBlock, PrinciplesBlock, TypographyRulesBlock } from "./sections/PrinciplesAndMeta";
 import { AdminWebBlock } from "./sections/AdminWebBlock";
 import { ColorsBlock } from "./sections/ColorsBlock";
@@ -26,7 +28,12 @@ const toc = [
 
 export function DesignSystemPage() {
   return (
-    <div className="pb-16">
+    <div className="mx-auto max-w-admin pb-16">
+      <p className="mb-6 font-sans text-body-sm">
+        <NavLink to="/" className="text-eco-teal hover:underline">
+          ← Volver al panel de administración
+        </NavLink>
+      </p>
       <header className="mb-8 border-b border-eco-gray-200 pb-8">
         <p className="font-sans text-label uppercase tracking-wide text-eco-teal">EcoRuta Inteligente v1.0</p>
         <h1 className="mt-2 font-display text-display text-eco-navy">Design system</h1>

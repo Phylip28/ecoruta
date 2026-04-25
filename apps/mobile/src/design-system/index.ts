@@ -7,6 +7,8 @@ export {
   Colors,
   navyAlpha,
   tealAlpha,
+  tableEstadoBadges,
+  tableTypeBadges,
   type EcoColorName,
 } from "./tokens/colors";
 export { Spacing, touchTarget } from "./tokens/spacing";
@@ -18,3 +20,30 @@ export { Typography } from "./tokens/typography";
 export { EcoIcons } from "./tokens/icons";
 export { chartColors } from "./tokens/chartColors";
 export { FontFamily } from "./fonts";
+
+export {
+  ActiveRoutePanel,
+  CitizenCTA,
+  CitizenEmptyState,
+  CitizenReportCard,
+  CollectionDayBadge,
+  ConfirmCollectionSheetPreview,
+  ContextHelpBanner,
+  FeedbackBanner,
+  GallerySection,
+  LocationReadonlyRow,
+  MapPinSpecRow,
+  MaterialChipsRow,
+  PhotoDropZone,
+  RecyclerStatePanel,
+  ReportStatusBadge,
+  RoleCard,
+  SkeletonPlaceholder,
+  type CitizenCTAVariant,
+  type CitizenReportEstado,
+  type CitizenReportTipo,
+  type EcoRoleKind,
+  type FeedbackVariant,
+  type MaterialChipOption,
+  type ReportUiStatus,
+} from "./components";

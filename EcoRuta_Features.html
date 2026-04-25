@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoRuta Inteligente — Feature Specs</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --green: #3fb950;
+    --green-dim: #1a4a2e;
+    --teal: #39d353;
+    --yellow: #e3b341;
+    --red: #f85149;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --orange: #ffa657;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #3fb950;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #0d2818 0%, #0d1117 50%, #0d1a2e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(63,185,80,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 200px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(88,166,255,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .badge {
+    display: inline-block;
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid var(--green);
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 42px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .header h1 span { color: var(--green); }
+  .header p {
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 560px;
+  }
+  .header-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+  }
+  .meta-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .meta-chip .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* LAYOUT */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 60px 80px; }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    gap: 20px;
+    padding: 20px 60px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+  }
+
+  /* SECTION */
+  .section {
+    margin-top: 48px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .section-subtitle {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .section-count {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* FEATURE GRID */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 12px;
+  }
+
+  /* FEATURE CARD */
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .feature-card:hover {
+    border-color: var(--accent);
+    background: #161e24;
+  }
+  .feature-card.priority-critical { border-left: 3px solid var(--red); }
+  .feature-card.priority-high { border-left: 3px solid var(--yellow); }
+  .feature-card.priority-medium { border-left: 3px solid var(--blue); }
+  .feature-card.priority-low { border-left: 3px solid var(--purple); }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .card-id {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+  .card-badges {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .tag {
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tag-hu { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .tag-mvp { background: rgba(227,179,65,0.15); color: var(--yellow); border: 1px solid rgba(227,179,65,0.3); }
+  .tag-ia { background: rgba(188,140,255,0.15); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+  .tag-plus { background: rgba(88,166,255,0.15); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+  .tag-arch { background: rgba(255,166,87,0.15); color: var(--orange); border: 1px solid rgba(255,166,87,0.3); }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 7px;
+    line-height: 1.3;
+  }
+  .card-desc {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  .card-details {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+  .detail-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 5px;
+    align-items: flex-start;
+  }
+  .detail-label {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    min-width: 70px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .detail-value {
+    color: var(--text);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .detail-value code {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0 5px;
+    font-size: 10px;
+    color: var(--orange);
+  }
+
+  .priority-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .priority-pill.critical { background: rgba(248,81,73,0.15); color: var(--red); }
+  .priority-pill.high { background: rgba(227,179,65,0.15); color: var(--yellow); }
+  .priority-pill.medium { background: rgba(88,166,255,0.15); color: var(--blue); }
+  .priority-pill.low { background: rgba(188,140,255,0.15); color: var(--purple); }
+
+  /* SUMMARY BAR */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 32px 0 0;
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+  .summary-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--green);
+  }
+  .summary-label {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  /* RUBRIC BAR */
+  .rubric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .rubric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .rubric-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .rubric-pct {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--green);
+    font-family: 'Syne', sans-serif;
+  }
+  .rubric-features {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .rubric-feat {
+    font-size: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: var(--muted);
+  }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  .arch-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-top: 16px;
+  }
+  .arch-box h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  .arch-box pre {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+  }
+  .arch-box pre .hl { color: var(--green); }
+  .arch-box pre .hl2 { color: var(--blue); }
+  .arch-box pre .hl3 { color: var(--orange); }
+
+  .phase-timeline {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .phase-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .phase-num {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .phase-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin: 4px 0 10px;
+  }
+  .phase-item {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 5px;
+    align-items: flex-start;
+  }
+  .phase-bullet {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .phase-item span { font-size: 11px; color: var(--muted); }
+
+  @media (max-width: 900px) {
+    .container, .header, .legend { padding-left: 24px; padding-right: 24px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .summary, .rubric-grid, .phase-timeline { grid-template-columns: 1fr 1fr; }
+    .header h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="badge">Hackatón V2.0 · 2026 · UCLA</div>
+  <h1>EcoRuta <span>Inteligente</span></h1>
+  <p>Especificación completa de features — Stack: Expo + React Native + TypeScript · FastAPI + Python + Docker</p>
+  <div class="header-meta">
+    <div class="meta-chip"><span class="dot" style="background:var(--red)"></span>Crítico / MVP obligatorio</div>
+    <div class="meta-chip"><span class="dot" style="background:var(--yellow)"></span>Alta prioridad</div>
+    <div class="meta-chip"><span class="dot" style="background:var(--blue)"></span>Media prioridad</div>
+    <div class="meta-chip"><span class="dot" style="background:var(--purple)"></span>Diferenciador / Bonus</div>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot" style="background:var(--green)"></span><span class="tag tag-hu">HU-X</span> Historia de Usuario del reto</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--yellow)"></span><span class="tag tag-mvp">MVP</span> Criterio de Aceptación obligatorio</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--purple)"></span><span class="tag tag-ia">IA</span> Componente de IA (puntaje extra)</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span><span class="tag tag-plus">PLUS</span> Feature diferenciadora</div>
+  <div class="legend-item"><span class="legend-dot" style="background:var(--orange)"></span><span class="tag tag-arch">ARCH</span> Arquitectura / Patrón</div>
+</div>
+
+<div class="container">
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="summary-card">
+      <div class="summary-num">32</div>
+      <div class="summary-label">Features totales</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num">15</div>
+      <div class="summary-label">Frontend (RN + Expo)</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num">14</div>
+      <div class="summary-label">Backend (FastAPI)</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num">3</div>
+      <div class="summary-label">Arquitectura / Infra</div>
+    </div>
+  </div>
+
+  <!-- ===== FRONTEND ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(63,185,80,0.15);">📱</div>
+      <div>
+        <div class="section-title">Frontend — Expo · React Native · TypeScript</div>
+        <div class="section-subtitle">Interfaz móvil multi-rol orientada a usabilidad y accesibilidad comunitaria</div>
+      </div>
+      <div class="section-count">15 features</div>
+    </div>
+    <div class="features-grid">
+
+      <!-- FE-01 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">FE-01</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-1 HU-2 HU-3 HU-4</span>
+          </div>
+        </div>
+        <div class="card-title">Autenticación y Enrutamiento Multi-Rol</div>
+        <div class="card-desc">Login y registro con redirección automática según rol: Ciudadano, Reciclador o Administrador. Sesión persistente con JWT almacenado en SecureStore de Expo.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>expo-secure-store</code> · <code>react-navigation</code> · <code>Zustand</code></span></div>
+          <div class="detail-row"><span class="detail-label">Pantallas</span><span class="detail-value">LoginScreen, RegisterScreen, RoleRouter (HOC)</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- FE-02 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">FE-02</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-1</span>
+            <span class="tag tag-ia">IA</span>
+          </div>
+        </div>
+        <div class="card-title">Cámara de Reporte con Geolocalización</div>
+        <div class="card-desc">Captura de foto del punto crítico con GPS automático. El tipo de reporte se preselecciona mediante IA de clasificación visual. Soporta modo sin red con queue offline.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>expo-camera</code> · <code>expo-location</code> · <code>expo-image-picker</code></span></div>
+          <div class="detail-row"><span class="detail-label">Flujo</span><span class="detail-value">Foto → GPS → Tipo (auto/manual: EMERGENCIA | SOLICITUD) → Descripción → Enviar</span></div>
+          <div class="detail-row"><span class="detail-label">DoD</span><span class="detail-value">Captura coordenadas + imagen. Criterio de Aceptación #1 ✅</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- FE-03 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">FE-03</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-2</span>
+          </div>
+        </div>
+        <div class="card-title">Selector Visual de Material Reciclable</div>
+        <div class="card-desc">Formulario con iconos grandes y colores para elegir tipo de material (vidrio, plástico, cartón, metal, orgánico, RAEE). Incluye campo de cantidad estimada en kg.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>react-native</code> FlatList con iconos vectoriales</span></div>
+          <div class="detail-row"><span class="detail-label">UX</span><span class="detail-value">Iconos grandes táctiles (min 48dp), etiquetas visibles, multiselección</span></div>
+          <div class="detail-row"><span class="detail-label">DoD</span><span class="detail-value">Solicitud registrada con tipo + kg estimados. Criterio #1 ✅</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- FE-04 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">FE-04</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-3</span>
+          </div>
+        </div>
+        <div class="card-title">Mapa Interactivo del Reciclador (Pines)</div>
+        <div class="card-desc">Vista de mapa centrada en la ubicación del reciclador con pines de solicitudes pendientes. Diferencia por color entre EMERGENCIA (rojo) y SOLICITUD (verde). Filtro por radio.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>react-native-maps</code> o WebView + Leaflet (OSM, gratuito)</span></div>
+          <div class="detail-row"><span class="detail-label">Pines</span><span class="detail-value">Rojo = Emergencia · Verde = Solicitud · Amarillo = En camino</span></div>
+          <div class="detail-row"><span class="detail-label">DoD</span><span class="detail-value">Pines visibles y diferenciados en mapa. Criterio #2 ✅</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- FE-05 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">FE-05</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-3</span>
+          </div>
+        </div>
+        <div class="card-title">Panel de Estado de Recogida (Flujo Táctil)</div>
+        <div class="card-desc">Botonera para cambiar el estado de cada recogida: Pendiente → En Camino → Completado. El pin del mapa cambia de color en tiempo real. Confirmación con feedback háptico.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>expo-haptics</code> · WebSocket o polling al backend</span></div>
+          <div class="detail-row"><span class="detail-label">Estados</span><span class="detail-value">PENDIENTE → EN_CAMINO → COMPLETADO (irreversible)</span></div>
+          <div class="detail-row"><span class="detail-label">DoD</span><span class="detail-value">Pin desaparece/cambia al completar. Criterio #3 ✅</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- FE-06 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">FE-06</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-3</span>
+          </div>
+        </div>
+        <div class="card-title">Visualizador de Eco-Ruta Sugerida</div>
+        <div class="card-desc">Dibuja la polilínea de la ruta optimizada sobre el mapa. Muestra la secuencia de visitas, distancia total estimada y tiempo aproximado. Botón "Iniciar Ruta" activa navegación turn-by-turn básica.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>react-native-maps</code> Polyline · OSRM API (open source)</span></div>
+          <div class="detail-row"><span class="detail-label">Datos</span><span class="detail-value">Secuencia de coordenadas del backend + distancia total en km</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- FE-07 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">FE-07</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-1 HU-4</span>
+          </div>
+        </div>
+        <div class="card-title">Tablero de Gamificación — Residuos Desviados</div>
+        <div class="card-desc">Contador animado de kg desviados del relleno La Pradera por el reciclador. Equivalencia en árboles salvados y CO₂ evitado. Badge de nivel (Reciclador Bronce/Plata/Oro).</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>react-native-reanimated</code> para animación del contador</span></div>
+          <div class="detail-row"><span class="detail-row"></span></div>
+          <div class="detail-row"><span class="detail-label">DoD</span><span class="detail-value">Muestra contador por recolección exitosa. Criterio #4 ✅</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- FE-08 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">FE-08</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-4</span>
+          </div>
+        </div>
+        <div class="card-title">Mapa de Calor Administrativo</div>
+        <div class="card-desc">Capa de gradiente de color sobre el mapa de Medellín mostrando densidad de reportes por barrio/comuna. Filtros por fecha, tipo de residuo y estado.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value">WebView + Leaflet.heat (heatmap plugin, open source)</span></div>
+          <div class="detail-row"><span class="detail-label">Datos</span><span class="detail-value">Agregados por barrio desde endpoint <code>GET /admin/heatmap</code></span></div>
+          <div class="detail-row"><span class="detail-label">DoD</span><span class="detail-value">Mapa de calor visible con zoom por barrio. Criterio implícito HU-4 ✅</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- FE-09 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">FE-09</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-4</span>
+          </div>
+        </div>
+        <div class="card-title">Dashboard de Métricas de Impacto (Admin)</div>
+        <div class="card-desc">Gráficos de barras y línea con kg por tipo de material, reducción de puntos críticos por semana, recicladores activos y tasa de atención.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>victory-native</code> o <code>react-native-chart-kit</code></span></div>
+          <div class="detail-row"><span class="detail-label">Gráficos</span><span class="detail-value">BarChart (kg/material) · LineChart (evolución) · KPI cards</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- FE-10 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">FE-10</span>
+          <div class="card-badges">
+            <span class="tag tag-hu">HU-1</span>
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Historial de Reportes del Ciudadano</div>
+        <div class="card-desc">Lista con estado actual de cada reporte enviado (Pendiente / En Camino / Atendido). Miniatura de la foto, fecha, tipo y nombre del reciclador asignado.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>FlashList</code> de Shopify para listas grandes eficientes</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- FE-11 -->
+      <div class="feature-card priority-medium">
+        <div class="card-top">
+          <span class="card-id">FE-11</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Notificaciones Push de Proximidad</div>
+        <div class="card-desc">Alerta al reciclador cuando se genera un nuevo reporte en un radio configurable de su ubicación actual. Notificación local cuando acepta una solicitud.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>expo-notifications</code> · <code>expo-task-manager</code> (background)</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill medium">● Media</span></div>
+        </div>
+      </div>
+
+      <!-- FE-12 -->
+      <div class="feature-card priority-medium">
+        <div class="card-top">
+          <span class="card-id">FE-12</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Soporte Offline con SQLite</div>
+        <div class="card-desc">Persistencia local de reportes pendientes de envío cuando no hay red. Al recuperar conectividad, sincroniza automáticamente la queue con el backend.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>expo-sqlite</code> · queue pattern con <code>NetInfo</code></span></div>
+          <div class="detail-row"><span class="detail-label">Relevancia</span><span class="detail-value">Comunas con baja señal — impacto social real</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill medium">● Media</span></div>
+        </div>
+      </div>
+
+      <!-- FE-13 -->
+      <div class="feature-card priority-medium">
+        <div class="card-top">
+          <span class="card-id">FE-13</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Perfil de Reciclador con Rating</div>
+        <div class="card-desc">El ciudadano puede ver foto, nombre y calificación promedio del reciclador asignado a su solicitud. Genera confianza y seguridad en la interacción.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value">Pantalla modal con avatar + estrellas + reseñas recientes</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill medium">● Media</span></div>
+        </div>
+      </div>
+
+      <!-- FE-14 -->
+      <div class="feature-card priority-low">
+        <div class="card-top">
+          <span class="card-id">FE-14</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+            <span class="tag tag-ia">IA</span>
+          </div>
+        </div>
+        <div class="card-title">Centro de Educación Ambiental (Cards + IA)</div>
+        <div class="card-desc">Carrusel de tips de segregación en la fuente. Chatbot simple que responde preguntas básicas de reciclaje usando LLM con contexto fijo de materiales reciclables en Medellín.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>FlatList</code> horizontal · Claude/OpenAI API para chatbot</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill low">● Baja</span></div>
+        </div>
+      </div>
+
+      <!-- FE-15 -->
+      <div class="feature-card priority-low">
+        <div class="card-top">
+          <span class="card-id">FE-15</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Modo Accesibilidad</div>
+        <div class="card-desc">Toggle de fuente grande y contraste alto. Soporte de VoiceOver/TalkBack. Etiquetas de accesibilidad en todos los elementos interactivos. Botones con área táctil mínima de 48dp.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>AccessibilityInfo</code> API · <code>accessibilityLabel</code> en todos los componentes</span></div>
+          <div class="detail-row"><span class="detail-label">Rúbrica</span><span class="detail-value">Suma puntos en UX/UI (20%)</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill low">● Baja (diferenciador UX)</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ===== BACKEND ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(88,166,255,0.15);">⚙️</div>
+      <div>
+        <div class="section-title">Backend — Python · FastAPI · Docker</div>
+        <div class="section-subtitle">Motor de procesamiento geoespacial, IA y lógica de negocio</div>
+      </div>
+      <div class="section-count">14 features</div>
+    </div>
+    <div class="features-grid">
+
+      <!-- BE-01 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">BE-01</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+          </div>
+        </div>
+        <div class="card-title">Servicio de Autenticación JWT Multi-Rol</div>
+        <div class="card-desc">Registro, login y refresh de tokens. Decoradores de permisos por rol (ciudadano, reciclador, admin). Password hasheado con bcrypt.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>POST /auth/register</code> · <code>POST /auth/login</code> · <code>POST /auth/refresh</code></span></div>
+          <div class="detail-row"><span class="detail-label">Librería</span><span class="detail-value"><code>python-jose</code> · <code>passlib[bcrypt]</code> · <code>fastapi-security</code></span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- BE-02 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">BE-02</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-1 HU-2</span>
+          </div>
+        </div>
+        <div class="card-title">API de Reportes y Solicitudes (CRUD)</div>
+        <div class="card-desc">Endpoints para crear, listar y actualizar reportes. Diferencia entre tipo EMERGENCIA y SOLICITUD_RECOLECCION. Almacena imagen, coordenadas, tipo de material y estado.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>POST /reportes</code> · <code>GET /reportes</code> · <code>PATCH /reportes/{id}/estado</code></span></div>
+          <div class="detail-row"><span class="detail-label">Storage</span><span class="detail-value">Imágenes en volumen Docker, ruta relativa en PostgreSQL</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- BE-03 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">BE-03</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-3</span>
+          </div>
+        </div>
+        <div class="card-title">Gestor de Estados de Recolección</div>
+        <div class="card-desc">Máquina de estados que valida transiciones legales (PENDIENTE→EN_CAMINO→COMPLETADO). Al completar, dispara el cálculo de kg desviados y actualiza métricas del reciclador.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>PATCH /recolecciones/{id}/estado</code></span></div>
+          <div class="detail-row"><span class="detail-label">Patrón</span><span class="detail-value">State Machine + Event Emitter interno</span></div>
+          <div class="detail-row"><span class="detail-label">DoD</span><span class="detail-value">Criterio de Aceptación #3 ✅</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- BE-04 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">BE-04</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-3</span>
+          </div>
+        </div>
+        <div class="card-title">Motor de Optimización de Rutas</div>
+        <div class="card-desc">Recibe ubicación del reciclador + lista de solicitudes pendientes y devuelve la secuencia óptima usando Nearest Neighbor (TSP heurístico). Filtrable por radio en km.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>POST /rutas/optimizar</code> → lista ordenada de coordenadas</span></div>
+          <div class="detail-row"><span class="detail-label">Algoritmo</span><span class="detail-value">Nearest Neighbor greedy con <code>scipy.spatial</code> (open source)</span></div>
+          <div class="detail-row"><span class="detail-label">Input</span><span class="detail-value"><code>{lat, lng, radio_km}</code> → array de puntos ordenados</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- BE-05 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">BE-05</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-4</span>
+          </div>
+        </div>
+        <div class="card-title">Cálculo de Huella de Carbono e Indicadores</div>
+        <div class="card-desc">Algoritmo que convierte kg recolectados por tipo de material en CO₂ equivalente evitado. Factores de emisión por material basados en datos EPAs. Expone endpoint para el dashboard.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>GET /metricas/impacto</code> → kg_total, co2_evitado_kg, arboles_equiv</span></div>
+          <div class="detail-row"><span class="detail-label">Factores</span><span class="detail-value">Plástico: 1.9 kg CO₂/kg · Cartón: 0.9 · Vidrio: 0.3 · Metal: 4.0</span></div>
+          <div class="detail-row"><span class="detail-label">DoD</span><span class="detail-value">Criterio de Aceptación #5 ✅</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- BE-06 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">BE-06</span>
+          <div class="card-badges">
+            <span class="tag tag-ia">IA</span>
+            <span class="tag tag-plus">PLUS</span>
+            <span class="tag tag-hu">HU-1 HU-2</span>
+          </div>
+        </div>
+        <div class="card-title">API de Clasificación de Residuos por Imagen (IA)</div>
+        <div class="card-desc">Endpoint que recibe la foto del reporte y devuelve el tipo de material detectado automáticamente. Usa un LLM multimodal (Claude claude-sonnet-4-20250514 vision) para no requerir entrenamiento propio.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>POST /ia/clasificar-residuo</code> → tipo, confianza, descripcion</span></div>
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value">Anthropic API / OpenAI Vision · prompt engineering</span></div>
+          <div class="detail-row"><span class="detail-label">Rúbrica</span><span class="detail-value">Suma en Creatividad/Innovación (20%) ✨</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta (diferenciador)</span></div>
+        </div>
+      </div>
+
+      <!-- BE-07 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">BE-07</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-4</span>
+          </div>
+        </div>
+        <div class="card-title">Servicio de Georreferenciación (PostGIS)</div>
+        <div class="card-desc">Consultas espaciales que retornan reportes dentro de un radio dado. Usa ST_DWithin de PostGIS para búsquedas eficientes. Fallback con fórmula Haversine si PostGIS no está disponible.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>GET /reportes?lat=&lng=&radio=</code></span></div>
+          <div class="detail-row"><span class="detail-label">DB</span><span class="detail-value">PostgreSQL 15 + <code>postgis</code> extension · SQLAlchemy GeoAlchemy2</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- BE-08 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">BE-08</span>
+          <div class="card-badges">
+            <span class="tag tag-mvp">MVP</span>
+            <span class="tag tag-hu">HU-4</span>
+          </div>
+        </div>
+        <div class="card-title">Generador de Datos para Mapa de Calor</div>
+        <div class="card-desc">Agrega reportes por barrio/comuna de Medellín (grid de 0.01°). Devuelve array de {lat, lng, intensidad} para renderizado del heatmap en el frontend.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>GET /admin/heatmap?desde=&hasta=&tipo=</code></span></div>
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>pandas</code> groupby + espacial · cache con <code>Redis</code> opcional</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- BE-09 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">BE-09</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+            <span class="tag tag-ia">IA</span>
+          </div>
+        </div>
+        <div class="card-title">Middleware de Priorización por Urgencia (NLP)</div>
+        <div class="card-desc">Analiza la descripción textual del reporte y asigna un score de urgencia (1-5). Usa un LLM para detectar palabras clave de emergencia ambiental o de salud pública.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Integración</span><span class="detail-value">Se ejecuta al crear reporte. Ajusta el orden en la ruta del reciclador.</span></div>
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value">FastAPI middleware · LLM prompt o modelo local <code>transformers</code></span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta (diferenciador IA)</span></div>
+        </div>
+      </div>
+
+      <!-- BE-10 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">BE-10</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Microservicio de Auditoría y Trazabilidad</div>
+        <div class="card-desc">Log inmutable de cada transición de estado: quién reportó, quién recogió, timestamps. Genera el historial ciudadano y garantiza transparencia para las autoridades.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>GET /auditoria/reporte/{id}</code> → timeline de eventos</span></div>
+          <div class="detail-row"><span class="detail-label">Patrón</span><span class="detail-value">Event Sourcing ligero en tabla <code>audit_log</code></span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- BE-11 -->
+      <div class="feature-card priority-medium">
+        <div class="card-top">
+          <span class="card-id">BE-11</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Sistema de Alertas Basado en Eventos</div>
+        <div class="card-desc">Al crear un reporte tipo EMERGENCIA, emite un evento que notifica a los recicladores activos en el radio. Se puede implementar con Server-Sent Events (SSE) sin necesidad de WebSockets.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value">FastAPI <code>EventSourceResponse</code> (SSE) · <code>asyncio</code></span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill medium">● Media</span></div>
+        </div>
+      </div>
+
+      <!-- BE-12 -->
+      <div class="feature-card priority-medium">
+        <div class="card-top">
+          <span class="card-id">BE-12</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Endpoint de Estadísticas Administrativas en Tiempo Real</div>
+        <div class="card-desc">Agrega KPIs clave: recicladores activos hoy, kg totales por semana, top 5 barrios con más reportes, tasa de atención (reportes completados vs total).</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>GET /admin/stats</code> · respuesta < 500ms con índices DB</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill medium">● Media</span></div>
+        </div>
+      </div>
+
+      <!-- BE-13 -->
+      <div class="feature-card priority-medium">
+        <div class="card-top">
+          <span class="card-id">BE-13</span>
+          <div class="card-badges">
+            <span class="tag tag-ia">IA</span>
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">API de PQRS Automatizada con LLM</div>
+        <div class="card-desc">Clasifica quejas y sugerencias de texto libre en categorías (servicio, infraestructura, reciclador, app) y las enruta al área correspondiente. Respuesta automática de acuse de recibo.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Endpoints</span><span class="detail-value"><code>POST /pqrs</code> → categoria, prioridad, area_responsable</span></div>
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value">LLM con function calling / structured output</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill medium">● Media</span></div>
+        </div>
+      </div>
+
+      <!-- BE-14 -->
+      <div class="feature-card priority-low">
+        <div class="card-top">
+          <span class="card-id">BE-14</span>
+          <div class="card-badges">
+            <span class="tag tag-plus">PLUS</span>
+          </div>
+        </div>
+        <div class="card-title">Worker de Limpieza y Deduplicación</div>
+        <div class="card-desc">Proceso en background que detecta reportes duplicados (misma zona < 50m en < 30 min) y los agrupa. Marca falsos positivos usando distancia espacial y similitud de imagen (hash perceptual).</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tecnología</span><span class="detail-value"><code>APScheduler</code> · <code>imagehash</code> · PostGIS ST_DWithin</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill low">● Baja</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ===== ARQUITECTURA ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(255,166,87,0.15);">🏗️</div>
+      <div>
+        <div class="section-title">Arquitectura e Infraestructura</div>
+        <div class="section-subtitle">Patrones, stack de datos y configuración Docker</div>
+      </div>
+      <div class="section-count">3 features</div>
+    </div>
+    <div class="features-grid">
+
+      <!-- ARCH-01 -->
+      <div class="feature-card priority-critical">
+        <div class="card-top">
+          <span class="card-id">ARCH-01</span>
+          <div class="card-badges"><span class="tag tag-arch">ARCH</span><span class="tag tag-mvp">MVP</span></div>
+        </div>
+        <div class="card-title">Docker Compose Multi-Servicio</div>
+        <div class="card-desc">Orquesta FastAPI + PostgreSQL/PostGIS + (opcional) Redis en un solo comando. Volúmenes para persistencia de imágenes y DB. Variables de entorno con <code>.env</code> para configuración.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Servicios</span><span class="detail-value"><code>api</code> (FastAPI) · <code>db</code> (postgis/postgis:15) · <code>redis</code> (opcional)</span></div>
+          <div class="detail-row"><span class="detail-label">Relevancia</span><span class="detail-value">Garantiza demo funcional en cualquier máquina el día del hackathon</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill critical">● Crítico</span></div>
+        </div>
+      </div>
+
+      <!-- ARCH-02 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">ARCH-02</span>
+          <div class="card-badges"><span class="tag tag-arch">ARCH</span></div>
+        </div>
+        <div class="card-title">Arquitectura Layered (Controllers / Services / Repositories)</div>
+        <div class="card-desc">Separación clara en 3 capas en el backend: routers FastAPI, capa de servicios con lógica de negocio y capa de repositorios con acceso a DB. Facilita testing y escalabilidad post-hackathon.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Estructura</span><span class="detail-value"><code>app/routers/</code> · <code>app/services/</code> · <code>app/repositories/</code> · <code>app/models/</code></span></div>
+          <div class="detail-row"><span class="detail-label">Patrón</span><span class="detail-value">Repository Pattern + Dependency Injection de FastAPI</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+      <!-- ARCH-03 -->
+      <div class="feature-card priority-high">
+        <div class="card-top">
+          <span class="card-id">ARCH-03</span>
+          <div class="card-badges"><span class="tag tag-arch">ARCH</span></div>
+        </div>
+        <div class="card-title">Modelo de Datos Geoespacial (Schema DB)</div>
+        <div class="card-desc">Tablas principales con tipos geoespaciales: usuarios, reportes (punto geography), recolecciones, materiales, métricas_reciclador, audit_log. Índices espaciales en columnas de coordenadas.</div>
+        <div class="card-details">
+          <div class="detail-row"><span class="detail-label">Tablas</span><span class="detail-value"><code>users</code> · <code>reports</code> · <code>collections</code> · <code>materials</code> · <code>metrics</code> · <code>audit_log</code></span></div>
+          <div class="detail-row"><span class="detail-label">Índices</span><span class="detail-value">GIST index en columna <code>location</code> (geography type)</span></div>
+          <div class="detail-row"><span class="detail-label">Prioridad</span><span class="priority-pill high">● Alta</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- RUBRIC ALIGNMENT -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(188,140,255,0.15);">🏆</div>
+      <div>
+        <div class="section-title">Alineación con Rúbrica de Jurados</div>
+        <div class="section-subtitle">Cómo cada criterio se cubre con las features del proyecto</div>
+      </div>
+    </div>
+    <div class="rubric-grid">
+      <div class="rubric-card">
+        <div class="rubric-pct">10%</div>
+        <div class="rubric-title">Participación en Eventos</div>
+        <div style="color:var(--muted);font-size:11px;margin-top:4px;">Asistir a ≥1 espacio de los 4. Aplicar lo aprendido en el prototipo.</div>
+      </div>
+      <div class="rubric-card">
+        <div class="rubric-pct">20%</div>
+        <div class="rubric-title">Impacto y Valor Social</div>
+        <div class="rubric-features">
+          <span class="rubric-feat">BE-05 Huella carbono</span>
+          <span class="rubric-feat">FE-07 Gamificación</span>
+          <span class="rubric-feat">FE-08 Mapa calor</span>
+          <span class="rubric-feat">FE-09 Dashboard Admin</span>
+          <span class="rubric-feat">BE-10 Auditoría</span>
+        </div>
+      </div>
+      <div class="rubric-card">
+        <div class="rubric-pct">20%</div>
+        <div class="rubric-title">Creatividad e Innovación</div>
+        <div class="rubric-features">
+          <span class="rubric-feat">BE-06 IA Clasificación foto</span>
+          <span class="rubric-feat">BE-09 NLP urgencia</span>
+          <span class="rubric-feat">BE-04 Rutas optimizadas</span>
+          <span class="rubric-feat">FE-14 Chatbot eco</span>
+        </div>
+      </div>
+      <div class="rubric-card">
+        <div class="rubric-pct">20%</div>
+        <div class="rubric-title">Diseño UX/UI</div>
+        <div class="rubric-features">
+          <span class="rubric-feat">FE-03 Iconos material</span>
+          <span class="rubric-feat">FE-05 Feedback háptico</span>
+          <span class="rubric-feat">FE-13 Perfil reciclador</span>
+          <span class="rubric-feat">FE-15 Accesibilidad</span>
+          <span class="rubric-feat">FE-01 Rol router</span>
+        </div>
+      </div>
+      <div class="rubric-card">
+        <div class="rubric-pct">20%</div>
+        <div class="rubric-title">Funcionalidad del MVP</div>
+        <div class="rubric-features">
+          <span class="rubric-feat">FE-02 Cámara + GPS</span>
+          <span class="rubric-feat">FE-03 Selector material</span>
+          <span class="rubric-feat">FE-04 Mapa pines</span>
+          <span class="rubric-feat">FE-05 Cambio estado</span>
+          <span class="rubric-feat">ARCH-01 Docker</span>
+          <span class="rubric-feat">BE-01 a BE-05</span>
+        </div>
+      </div>
+      <div class="rubric-card">
+        <div class="rubric-pct">10%</div>
+        <div class="rubric-title">Pitch (15 min)</div>
+        <div style="color:var(--muted);font-size:11px;margin-top:4px;">3' problema · 7' demo HU-1 a HU-4 · 3' arquitectura · 2' próximos pasos</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- PHASE PLAN -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(57,211,83,0.15);">🚀</div>
+      <div>
+        <div class="section-title">Plan de Desarrollo por Fases</div>
+        <div class="section-subtitle">Orden de implementación sugerido para el hackathon</div>
+      </div>
+    </div>
+    <div class="phase-timeline">
+      <div class="phase-card" style="border-top:2px solid var(--red)">
+        <div class="phase-num">Fase 1 — Base</div>
+        <div class="phase-title">Setup & Auth</div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Docker Compose (ARCH-01)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Schema DB + PostGIS (ARCH-03)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Layered architecture (ARCH-02)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>JWT Auth multi-rol (BE-01)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Login/Register screen (FE-01)</span></div>
+      </div>
+      <div class="phase-card" style="border-top:2px solid var(--yellow)">
+        <div class="phase-num">Fase 2 — MVP Core</div>
+        <div class="phase-title">HU-1 a HU-4</div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Cámara + GPS (FE-02)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>CRUD reportes (BE-02)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Selector material (FE-03)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Mapa con pines (FE-04)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Cambio de estado (FE-05, BE-03)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Motor de rutas (BE-04, FE-06)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Gamificación (FE-07)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Huella carbono (BE-05)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Mapa de calor (FE-08, BE-08)</span></div>
+      </div>
+      <div class="phase-card" style="border-top:2px solid var(--purple)">
+        <div class="phase-num">Fase 3 — Diferenciadores</div>
+        <div class="phase-title">IA + UX Plus</div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>IA clasificación foto (BE-06)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>NLP urgencia (BE-09)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Dashboard admin (FE-09)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Historial ciudadano (FE-10)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Notificaciones push (FE-11)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Soporte offline (FE-12)</span></div>
+        <div class="phase-item"><span class="phase-bullet"></span><span>Auditoría (BE-10)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARCH DIAGRAM -->
+  <div class="arch-box" style="margin-top:32px;">
+    <h4>Estructura de proyecto sugerida</h4>
+    <pre>
+<span class="hl">ecoruta-inteligente/</span>
+├── <span class="hl2">mobile/</span>                     (Expo + React Native + TypeScript)
+│   ├── app/
+│   │   ├── (auth)/             login, register
+│   │   ├── (ciudadano)/        reporte, solicitud, historial
+│   │   ├── (reciclador)/       mapa, ruta, estado, gamificacion
+│   │   └── (admin)/            heatmap, dashboard, stats
+│   ├── components/             ui compartido
+│   ├── store/                  Zustand (auth, reportes, ruta)
+│   └── services/               api client (axios/fetch)
+│
+├── <span class="hl3">backend/</span>                    (FastAPI + Python + Docker)
+│   ├── app/
+│   │   ├── routers/            auth, reportes, rutas, admin, ia
+│   │   ├── services/           ruta_optimizer, carbon_calc, ia_classifier
+│   │   ├── repositories/       reporte_repo, user_repo, metrics_repo
+│   │   ├── models/             SQLAlchemy models (PostGIS)
+│   │   └── schemas/            Pydantic schemas
+│   ├── Dockerfile
+│   └── pyproject.toml          (uv)
+│
+└── docker-compose.yml          api + db(postgis) + redis(opcional)
+    </pre>
+  </div>
+
+</div>
+</body>
+</html>

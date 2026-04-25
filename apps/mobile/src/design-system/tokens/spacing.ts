@@ -13,8 +13,11 @@ export const Spacing = {
   s16: 64,
 } as const;
 
-/** Alturas mínimas de toque — sección 4.4 */
+/** Alturas mínimas de toque — §4.4 y §7.1 (CTA principal ciudadano 64dp según tabla §7.1) */
 export const touchTarget = {
+  /** §7.1 botón CTA emergencia / recolección ciudadano */
+  ctaCitizenPrimary: 64,
+  /** §4.4 botón principal ciudadano (otros CTAs secundarios) */
   ctaCiudadano: 56,
   ctaReciclador: 64,
   secondaryButton: 48,

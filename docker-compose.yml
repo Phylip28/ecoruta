@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${DB_USER:-ecoruta}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-cambia_esto}
     ports:
-      - "5432:5432"
+      - "5433:5433"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +21,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "8001:8000"
     env_file:
       - path: .env
         required: false

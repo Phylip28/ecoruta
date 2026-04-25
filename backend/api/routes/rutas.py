@@ -3,7 +3,7 @@ from typing import Annotated
 from api.dependencies import require_roles
 from api.schemas import RutaResponse
 from fastapi import APIRouter, Depends, Query
-from services.routing import calcular_ruta
+from services.routing_advanced import calcular_ruta_avanzada
 from services.store import store
 
 router = APIRouter()
@@ -21,12 +21,14 @@ async def obtener_ruta(
         for s in store.list()
         if s["tipo"] == "solicitud" and s["estado"] == "pendiente"
     ]
-    orden, distancia_total_km = calcular_ruta(
+    
+    orden, distancia, tiempo = await calcular_ruta_avanzada(
         latitud_actual, longitud_actual, pendientes
     )
 
     return {
         "reciclador_id": reciclador_id,
         "orden": orden,
-        "distancia_total_km": distancia_total_km,
+        "distancia_total_km": distancia,
+        "tiempo_estimado_min": tiempo,
     }

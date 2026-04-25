@@ -50,6 +50,7 @@ class RutaResponse(BaseModel):
     reciclador_id: int
     orden: list[ReporteResponse]
     distancia_total_km: float
+    tiempo_estimado_min: float | None = None
 
 
 class HeatmapPoint(BaseModel):

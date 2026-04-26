@@ -72,5 +72,7 @@ class HistorialCiudadanoItemResponse(BaseModel):
     fecha: datetime
     descripcion: str | None = None
     material: Material | None = None
+    reciclador_id: int | None = None
     reciclador_nombre: str | None = None
     miniatura_uri: str | None = None
+    kg_estimados: float = 0

@@ -43,7 +43,7 @@ async def listar_pendientes(
     return [
         s
         for s in store.list()
-        if s["tipo"] == "solicitud" and s["estado"] == "pendiente"
+        if s["estado"] == "pendiente"
     ]
 
 
@@ -54,7 +54,7 @@ async def actualizar_estado(
     solicitud_id: int = Path(..., ge=1),
 ) -> dict:
     actual = store.get(solicitud_id)
-    if actual is None or actual["tipo"] != "solicitud":
+    if actual is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Solicitud no encontrada",

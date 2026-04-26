@@ -1,523 +1,512 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Dimensions, FlatList, Pressable, StyleSheet, View } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import * as Location from "expo-location";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import {
-  ActivityIndicator,
-  Button,
-  FAB,
-  HelperText,
-  Surface,
-  Text,
-  TextInput,
-} from "react-native-paper";
+import { ActivityIndicator, Button, Text } from "react-native-paper";
 
 import { env } from "../../../config/env";
 import {
-  ActiveRoutePanel,
   BorderRadius,
   Colors,
-  EcoIcons,
   FontFamily,
   Shadows,
   Spacing,
-  Typography,
-  touchTarget,
 } from "../../../design-system";
 import {
   actualizarEstadoSolicitud,
-  crearSolicitudDemo,
   listarSolicitudesPendientes,
   obtenerRutaReciclador,
 } from "../api/recicladorClient";
-import { ImpactoResumen } from "../components/ImpactoResumen";
 import { MapaSolicitudes } from "../components/MapaSolicitudes";
-import { SolicitudCard } from "../components/SolicitudCard";
 import type { EstadoSolicitud, Solicitud } from "../types";
 
-function numeroSeguro(value: string, fallback: number): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+const MATERIAL_LABEL: Record<string, string> = {
+  carton: "Cartón",
+  plastico: "Plástico",
+  vidrio: "Vidrio",
+  mixto: "Mixto",
+};
+
+const NIVELES = [
+  { label: "Bronce", icon: "medal-outline", color: "#B45309", minCompleted: 0 },
+  { label: "Plata", icon: "medal", color: "#6B7280", minCompleted: 5 },
+  { label: "Oro", icon: "crown-outline", color: "#D97706", minCompleted: 12 },
+] as const;
+
+const KG_POR_SERVICIO = 2.8;
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+function formatMinutos(km: number): string {
+  return `~${Math.max(1, Math.round((km / 20) * 60))} min`;
+}
+
+function formatDist(km: number): string {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+}
+
+const MAP_HEIGHT = Math.round(Dimensions.get("window").height * 0.40);
 
 type RecicladorScreenProps = {
   onFeedback?: (msg: string, tipo?: "exito" | "error" | "info" | "advertencia") => void;
 };
 
 export function RecicladorScreen({ onFeedback }: RecicladorScreenProps = {}) {
-  const [recicladorId, setRecicladorId] = useState(String(env.mobile.recicladorId));
-  const [latitud, setLatitud] = useState(String(env.mobile.latitudInicial));
-  const [longitud, setLongitud] = useState(String(env.mobile.longitudInicial));
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [rutaIds, setRutaIds] = useState<number[]>([]);
-  const [distanciaKm, setDistanciaKm] = useState<number | null>(null);
+  const [tiempoRuta, setTiempoRuta] = useState<number | null>(null);
   const [completadasSesion, setCompletadasSesion] = useState(0);
-  const [statusMsg, setStatusMsg] = useState("Carga las solicitudes para empezar.");
+  const [kgSesion, setKgSesion] = useState(0);
   const [cargando, setCargando] = useState(false);
-  const [mostrarParams, setMostrarParams] = useState(false);
+  const [cargandoId, setCargandoId] = useState<number | null>(null);
+  const [recicladorLat, setRecicladorLat] = useState(env.mobile.latitudInicial);
+  const [recicladorLon, setRecicladorLon] = useState(env.mobile.longitudInicial);
 
-  const resumen = useMemo(() => ({
-    pendientes: solicitudes.filter((s) => s.estado === "pendiente").length,
-    enCamino: solicitudes.filter((s) => s.estado === "en_camino").length,
-  }), [solicitudes]);
-
-  const solicitudActiva = useMemo(() => {
-    if (rutaIds.length > 0) {
-      const porId = new Map(solicitudes.map((s) => [s.id, s]));
-      for (const id of rutaIds) {
-        const found = porId.get(id);
-        if (found && found.estado !== "completado") return found;
+  // GPS on mount
+  useEffect(() => {
+    void (async () => {
+      try {
+        const perm = await Location.requestForegroundPermissionsAsync();
+        if (perm.status === "granted") {
+          const pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setRecicladorLat(pos.coords.latitude);
+          setRecicladorLon(pos.coords.longitude);
+        }
+      } catch {
+        /* keep default coords */
       }
-    }
-    return solicitudes.find((s) => s.estado === "en_camino")
-      ?? solicitudes.find((s) => s.estado === "pendiente")
-      ?? null;
-  }, [rutaIds, solicitudes]);
+    })();
+  }, []);
 
-  // Para ActiveRoutePanel: paradas en orden
-  const paradasOrdenadas = useMemo(() => {
-    if (rutaIds.length === 0) return [];
-    const porId = new Map(solicitudes.map((s) => [s.id, s]));
-    return rutaIds
-      .map((id) => porId.get(id))
-      .filter(Boolean)
-      .map((s) => `#${s!.id} · ${s!.material ?? "mixto"} (${s!.kg_estimados} kg)`);
-  }, [rutaIds, solicitudes]);
-
-  async function ejecutar(action: () => Promise<void>) {
-    setCargando(true);
-    try { await action(); }
-    catch (e) {
-      const msg = e instanceof Error ? e.message : "Error inesperado";
-      setStatusMsg(msg);
-      onFeedback?.(msg, "error");
+  const nivel = useMemo(() => {
+    for (let i = NIVELES.length - 1; i >= 0; i--) {
+      if (completadasSesion >= NIVELES[i].minCompleted) return NIVELES[i];
     }
-    finally { setCargando(false); }
-  }
+    return NIVELES[0];
+  }, [completadasSesion]);
+
+  const solicitudesOrdenadas = useMemo(
+    () =>
+      [...solicitudes].sort((a, b) => {
+        // en_camino siempre primero
+        if (a.estado === "en_camino" && b.estado !== "en_camino") return -1;
+        if (b.estado === "en_camino" && a.estado !== "en_camino") return 1;
+        const da = haversineKm(recicladorLat, recicladorLon, a.latitud, a.longitud);
+        const db = haversineKm(recicladorLat, recicladorLon, b.latitud, b.longitud);
+        return da - db;
+      }),
+    [solicitudes, recicladorLat, recicladorLon],
+  );
 
   function upsertSolicitud(upd: Solicitud) {
     setSolicitudes((prev) => {
       const idx = prev.findIndex((s) => s.id === upd.id);
       if (idx < 0) return [upd, ...prev];
-      const clone = [...prev]; clone[idx] = upd; return clone;
+      const clone = [...prev];
+      clone[idx] = upd;
+      return clone;
     });
   }
 
-  function removerSolicitud(id: number) {
-    setSolicitudes((prev) => prev.filter((s) => s.id !== id));
-    setRutaIds((prev) => prev.filter((rid) => rid !== id));
+  async function ejecutar(action: () => Promise<void>) {
+    await action();
   }
 
-  async function cargarPendientes() {
-    await ejecutar(async () => {
+  const cargarPendientes = useCallback(async () => {
+    setCargando(true);
+    try {
       const data = await listarSolicitudesPendientes();
-      setSolicitudes(data); setRutaIds([]); setDistanciaKm(null);
-      setStatusMsg(`${data.length} solicitudes pendientes cargadas.`);
-      onFeedback?.(`${data.length} solicitudes cargadas.`, "info");
-    });
-  }
+      setSolicitudes(data);
+      setRutaIds([]);
+      setTiempoRuta(null);
 
-  async function calcularRuta() {
-    await ejecutar(async () => {
-      const data = await obtenerRutaReciclador({
-        recicladorId: numeroSeguro(recicladorId, env.mobile.recicladorId),
-        latitudActual: numeroSeguro(latitud, env.mobile.latitudInicial),
-        longitudActual: numeroSeguro(longitud, env.mobile.longitudInicial),
-      });
-      setRutaIds(data.orden.map((s) => s.id));
-      setDistanciaKm(data.distancia_total_km);
-      setStatusMsg(`Ruta optimizada: ${data.orden.length} puntos · ${data.distancia_total_km.toFixed(2)} km`);
-    });
-  }
+      if (data.length > 1) {
+        try {
+          const ruta = await obtenerRutaReciclador({
+            recicladorId: env.mobile.recicladorId,
+            latitudActual: recicladorLat,
+            longitudActual: recicladorLon,
+          });
+          // Reorder solicitudes per ORS-optimized order and populate route polyline
+          setSolicitudes(ruta.orden);
+          setRutaIds(ruta.orden.map((s) => s.id));
+          setTiempoRuta(ruta.tiempo_estimado_min ?? null);
+        } catch {
+          // ORS failed — use solicitudes as-is (Haversine order from screen)
+        }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error al cargar solicitudes";
+      onFeedback?.(msg, "error");
+    } finally {
+      setCargando(false);
+    }
+  }, [onFeedback, recicladorLat, recicladorLon]);
 
-  async function crearDemo() {
-    await ejecutar(async () => {
-      const baseLat = numeroSeguro(latitud, env.mobile.latitudInicial);
-      const baseLon = numeroSeguro(longitud, env.mobile.longitudInicial);
-      const materiales = ["carton", "vidrio", "plastico", "mixto"] as const;
-      const nueva = await crearSolicitudDemo({
-        latitud: Number((baseLat + (Math.random() - 0.5) * 0.02).toFixed(6)),
-        longitud: Number((baseLon + (Math.random() - 0.5) * 0.02).toFixed(6)),
-        descripcion: "Solicitud demo creada desde app mobile",
-        material: materiales[Math.floor(Math.random() * materiales.length)],
-        ciudadano_telegram_id: env.mobile.demoTelegramId,
-        kg_estimados: Number((Math.random() * 6 + 1).toFixed(1)),
-      });
-      upsertSolicitud(nueva);
-      setStatusMsg(`Demo #${nueva.id} creada.`);
-    });
-  }
+  useEffect(() => {
+    void cargarPendientes();
+  }, [cargarPendientes]);
 
-  async function cambiarEstado(id: number, estado: EstadoSolicitud) {
-    await ejecutar(async () => {
-      const upd = await actualizarEstadoSolicitud(id, estado);
-      if (estado === "completado") {
-        removerSolicitud(upd.id);
-        setCompletadasSesion((n) => n + 1);
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onFeedback?.(`Solicitud #${upd.id} completada. ¡Buen trabajo!`, "exito");
-      } else {
+  async function accionSolicitud(solicitud: Solicitud) {
+    if (cargandoId !== null) return;
+    setCargandoId(solicitud.id);
+    try {
+      if (solicitud.estado === "pendiente") {
+        const upd = await actualizarEstadoSolicitud(solicitud.id, "en_camino");
         upsertSolicitud(upd);
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        const label = solicitud.tipo === "emergencia" ? "emergencia" : "solicitud";
+        onFeedback?.(`En camino a ${label} #${upd.id}`, "info");
+      } else if (solicitud.estado === "en_camino") {
+        const upd = await actualizarEstadoSolicitud(solicitud.id, "completado");
+        setSolicitudes((prev) => prev.filter((s) => s.id !== upd.id));
+        setRutaIds((prev) => prev.filter((id) => id !== upd.id));
+        setCompletadasSesion((n) => n + 1);
+        setKgSesion((k) => k + (solicitud.kg_estimados || KG_POR_SERVICIO));
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onFeedback?.(`¡Completado! #${upd.id}`, "exito");
       }
-      setStatusMsg(`#${upd.id} → ${upd.estado}`);
-    });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error inesperado";
+      onFeedback?.(msg, "error");
+    } finally {
+      setCargandoId(null);
+    }
   }
+
+  function renderSolicitud({ item, index }: { item: Solicitud; index: number }) {
+    const dist = haversineKm(recicladorLat, recicladorLon, item.latitud, item.longitud);
+    const enCaminoItem = item.estado === "en_camino";
+    const esEmergencia = item.tipo === "emergencia";
+    const esteItemCargando = cargandoId === item.id;
+
+    const dotColor = enCaminoItem ? Colors.teal : esEmergencia ? "#EF4444" : "#22C55E";
+    const cardBorder = enCaminoItem ? Colors.teal : esEmergencia ? "#EF444440" : Colors.gray200;
+    const cardBg = enCaminoItem ? `${Colors.teal}08` : esEmergencia ? "#EF444408" : Colors.white;
+
+    const btnBg = enCaminoItem ? Colors.teal : esEmergencia ? "#EF4444" : Colors.yellow;
+    const btnFg = enCaminoItem || esEmergencia ? Colors.white : Colors.navy;
+    const btnLabel = enCaminoItem ? "Completar" : "Voy";
+
+    return (
+      <View style={[styles.listCard, { borderColor: cardBorder, backgroundColor: cardBg }]}>
+        {/* Número de orden */}
+        <View style={[styles.orderBadge, { backgroundColor: dotColor }]}>
+          <Text style={styles.orderBadgeText}>{index + 1}</Text>
+        </View>
+
+        {/* Info central */}
+        <View style={styles.listCardInfo}>
+          <Text style={styles.listCardTitle} numberOfLines={1}>
+            {esEmergencia ? "⚠ Emergencia" : MATERIAL_LABEL[item.material ?? "mixto"]}
+            {"  "}
+            <Text style={styles.listCardId}>#{item.id}</Text>
+          </Text>
+          <View style={styles.listCardMeta}>
+            <MaterialCommunityIcons name="clock-fast" size={13} color={Colors.gray500} />
+            <Text style={styles.listCardMetaText}>{formatMinutos(dist)} · {formatDist(dist)}</Text>
+            {item.kg_estimados > 0 && (
+              <>
+                <MaterialCommunityIcons name="weight-kilogram" size={13} color={Colors.gray500} />
+                <Text style={styles.listCardMetaText}>~{item.kg_estimados} kg</Text>
+              </>
+            )}
+          </View>
+          {item.descripcion ? (
+            <Text style={styles.listCardDesc} numberOfLines={1}>{item.descripcion}</Text>
+          ) : null}
+        </View>
+
+        {/* CTA */}
+        <Button
+          mode="contained"
+          buttonColor={btnBg}
+          textColor={btnFg}
+          compact
+          onPress={() => void accionSolicitud(item)}
+          disabled={cargandoId !== null}
+          loading={esteItemCargando}
+          style={styles.listBtn}
+          labelStyle={styles.listBtnLabel}
+        >
+          {btnLabel}
+        </Button>
+      </View>
+    );
+  }
+
+
 
   return (
     <View style={styles.root}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
-        {/* ── Barra de acciones — FE-05 / FE-06 ── */}
-        <View style={styles.actionBar}>
-          <Button
-            mode="contained"
-            icon="refresh"
-            buttonColor={Colors.lime}
-            textColor={Colors.navy}
-            onPress={() => void cargarPendientes()}
-            disabled={cargando}
-            loading={cargando}
-            style={styles.actionBtn}
-            labelStyle={styles.actionBtnLabel}
-            contentStyle={styles.actionBtnContent}
-            accessibilityLabel="Cargar solicitudes pendientes del backend"
-          >
-            Cargar pendientes
-          </Button>
-          <Button
-            mode="outlined"
-            icon="map-marker-path"
-            textColor={Colors.teal}
-            onPress={() => void calcularRuta()}
-            disabled={cargando || solicitudes.length === 0}
-            style={[styles.actionBtn, styles.actionBtnOutlined]}
-            labelStyle={[styles.actionBtnLabel, { color: Colors.teal }]}
-            contentStyle={styles.actionBtnContent}
-            accessibilityLabel="Calcular ruta óptima entre solicitudes"
-          >
-            Calcular ruta
-          </Button>
-        </View>
 
-        {/* ── Status ── */}
-        <View style={styles.statusRow}>
-          {cargando && <ActivityIndicator size={13} color={Colors.teal} />}
-          <Text style={styles.statusText} numberOfLines={1}>{statusMsg}</Text>
-          {distanciaKm !== null && (
-            <View style={styles.distPill}>
-              <MaterialCommunityIcons name="road-variant" size={11} color={Colors.teal} />
-              <Text style={styles.distLabel}>{distanciaKm.toFixed(2)} km</Text>
-            </View>
-          )}
-        </View>
-
-        {/* ── KPIs ── */}
-        <View style={styles.kpiRow}>
-          {[
-            { label: "Pendientes", value: resumen.pendientes, accent: Colors.yellow },
-            { label: "En camino",  value: resumen.enCamino,   accent: Colors.lime },
-            { label: "Completadas", value: completadasSesion,  accent: Colors.teal },
-          ].map((k) => (
-            <Surface key={k.label} style={[styles.kpiCard, { borderTopColor: k.accent }]} elevation={0}>
-              <Text style={[Typography.metric, { color: Colors.navy }]}>{k.value}</Text>
-              <Text style={styles.kpiLabel}>{k.label}</Text>
-            </Surface>
-          ))}
-        </View>
-
-        {/* ── Gamificación FE-07 ── */}
-        <ImpactoResumen completadasSesion={completadasSesion} />
-
-        {/* ── Mapa FE-04 / FE-06 ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="map-outline" size={17} color={Colors.navy} />
-            <Text style={styles.sectionTitle}>Mapa de solicitudes</Text>
-            {rutaIds.length > 0 && (
-              <View style={styles.routePill}>
-                <MaterialCommunityIcons name="vector-polyline" size={11} color={Colors.white} />
-                <Text style={styles.routePillText}>Ruta activa</Text>
-              </View>
-            )}
-          </View>
-          <MapaSolicitudes
-            solicitudes={solicitudes}
-            rutaIds={rutaIds}
-            recicladorLat={numeroSeguro(latitud, env.mobile.latitudInicial)}
-            recicladorLng={numeroSeguro(longitud, env.mobile.longitudInicial)}
-          />
-          <View style={styles.mapLegend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: Colors.danger }]} />
-              <Text style={styles.legendText}>Emergencia</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: Colors.lime }]} />
-              <Text style={styles.legendText}>Solicitud</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: "#7C3AED" }]} />
-              <Text style={styles.legendText}>En camino</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: Colors.teal }]} />
-              <Text style={styles.legendText}>Tú</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ── Ruta activa FE-06 (ActiveRoutePanel) ── */}
-        {rutaIds.length > 0 && paradasOrdenadas.length > 0 && (
-          <ActiveRoutePanel
-            titulo={`Eco-ruta · ${distanciaKm?.toFixed(2) ?? "?"} km`}
-            ordenParadas={paradasOrdenadas}
-            siguienteTitulo={
-              solicitudActiva
-                ? `Próxima parada — Solicitud #${solicitudActiva.id}`
-                : "Sin paradas activas"
-            }
-            siguienteDetalle={
-              solicitudActiva
-                ? `${solicitudActiva.material ?? "mixto"} · ${solicitudActiva.kg_estimados} kg\n${solicitudActiva.latitud.toFixed(4)}, ${solicitudActiva.longitud.toFixed(4)}`
-                : "Todas las solicitudes de la ruta completadas."
-            }
-          />
-        )}
-
-        {/* ── Solicitud activa más cercana ── */}
-        {solicitudActiva && (
-          <Surface style={[styles.activeSurface, Shadows.md]} elevation={0}>
-            <View style={styles.activeHeader}>
-              <View style={styles.activePulse} />
-              <Text style={styles.activeHeaderLabel}>Siguiente parada</Text>
-            </View>
-            <Text style={[Typography.heading3, { color: Colors.navy, marginTop: Spacing.s1 }]}>
-              Solicitud #{solicitudActiva.id}
-            </Text>
-            <Text style={[Typography.bodyMd, { color: Colors.gray700, marginTop: 2 }]}>
-              {solicitudActiva.material ?? "mixto"} · {solicitudActiva.kg_estimados} kg
-            </Text>
-            <View style={styles.quickActions}>
-              <Button
-                mode="contained"
-                icon="navigation-variant"
-                buttonColor={Colors.teal}
-                textColor={Colors.white}
-                onPress={() => void cambiarEstado(solicitudActiva.id, "en_camino")}
-                disabled={cargando || solicitudActiva.estado !== "pendiente"}
-                contentStyle={{ minHeight: touchTarget.ctaReciclador }}
-                style={[styles.quickBtn, { flex: 1 }]}
-                labelStyle={Typography.labelLg}
-              >
-                Aceptar ruta
-              </Button>
-              <Button
-                mode="contained"
-                icon="check-circle-outline"
-                buttonColor={Colors.lime}
-                textColor={Colors.navy}
-                onPress={() => void cambiarEstado(solicitudActiva.id, "completado")}
-                disabled={cargando || solicitudActiva.estado !== "en_camino"}
-                contentStyle={{ minHeight: touchTarget.ctaReciclador }}
-                style={[styles.quickBtn, { flex: 1 }]}
-                labelStyle={Typography.labelLg}
-              >
-                Completar
-              </Button>
-            </View>
-          </Surface>
-        )}
-
-        {/* ── Parámetros (colapsable) ── */}
-        <Pressable
-          onPress={() => setMostrarParams((v) => !v)}
-          style={styles.paramsToggle}
-          accessibilityLabel="Configurar parámetros de ruta"
-        >
-          <MaterialCommunityIcons name="tune-variant" size={16} color={Colors.gray500} />
-          <Text style={styles.paramsToggleLabel}>Parámetros de ruta</Text>
-          <MaterialCommunityIcons
-            name={mostrarParams ? "chevron-up" : "chevron-down"}
-            size={16}
-            color={Colors.gray500}
-          />
-        </Pressable>
-
-        {mostrarParams && (
-          <Surface style={[styles.paramsPanel, Shadows.sm]} elevation={0}>
-            <TextInput
-              mode="outlined"
-              label="Reciclador ID"
-              value={recicladorId}
-              onChangeText={setRecicladorId}
-              keyboardType="numeric"
-              style={styles.paramInput}
-              outlineStyle={{ borderRadius: BorderRadius.md }}
-              dense
-            />
-            <View style={styles.paramsRow}>
-              <TextInput
-                mode="outlined"
-                label="Latitud"
-                value={latitud}
-                onChangeText={setLatitud}
-                keyboardType="decimal-pad"
-                style={[styles.paramInput, { flex: 1 }]}
-                outlineStyle={{ borderRadius: BorderRadius.md }}
-                dense
-              />
-              <TextInput
-                mode="outlined"
-                label="Longitud"
-                value={longitud}
-                onChangeText={setLongitud}
-                keyboardType="decimal-pad"
-                style={[styles.paramInput, { flex: 1 }]}
-                outlineStyle={{ borderRadius: BorderRadius.md }}
-                dense
-              />
-            </View>
-            {rutaIds.length > 0 && (
-              <HelperText type="info" style={Typography.bodySm}>
-                Orden optimizado: {rutaIds.join(" → ")}
-              </HelperText>
-            )}
-          </Surface>
-        )}
-
-        {/* ── Lista de solicitudes ── */}
-        {solicitudes.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <MaterialCommunityIcons name="clipboard-list-outline" size={17} color={Colors.navy} />
-              <Text style={styles.sectionTitle}>
-                Solicitudes ({solicitudes.length})
-              </Text>
-            </View>
-            {solicitudes.map((s) => (
-              <SolicitudCard
-                key={s.id}
-                solicitud={s}
-                onEstado={cambiarEstado}
-                disabled={cargando}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* ── Estado vacío ── */}
-        {solicitudes.length === 0 && !cargando && (
-          <View style={styles.empty}>
-            <MaterialCommunityIcons name="clipboard-text-outline" size={52} color={Colors.gray300} />
-            <Text style={[Typography.bodyMd, { color: Colors.gray500, textAlign: "center" }]}>
-              Presiona "Cargar pendientes" para ver las solicitudes disponibles
-            </Text>
-          </View>
-        )}
-
-        <View style={{ height: Spacing.s16 + 20 }} />
-      </ScrollView>
-
-      {/* ── FAB demo ── */}
-      <FAB
-        icon="plus"
-        label="Demo"
-        style={[styles.fab, { backgroundColor: Colors.teal }]}
-        color={Colors.white}
-        onPress={() => void crearDemo()}
+      {/* ── Banner: contador + refresh ── */}
+      <Pressable
+        onPress={() => void cargarPendientes()}
+        style={styles.banner}
         disabled={cargando}
-        accessibilityLabel="Crear solicitud demo para pruebas"
+        accessibilityRole="button"
+        accessibilityLabel={`${solicitudes.length} solicitudes. Toca para refrescar`}
+      >
+        <MaterialCommunityIcons name="map-marker-multiple" size={20} color={Colors.yellow} />
+        <Text style={styles.bannerText}>
+          {cargando ? "Actualizando…" : `${solicitudes.length} solicitudes cerca de ti`}
+        </Text>
+        <View style={styles.flex1} />
+        {cargando
+          ? <ActivityIndicator size={16} color={Colors.yellow} />
+          : <MaterialCommunityIcons name="refresh" size={20} color="rgba(255,255,255,0.5)" />
+        }
+      </Pressable>
+
+      {/* ── Mapa ── */}
+      <View style={styles.mapWrap}>
+        <MapaSolicitudes
+          solicitudes={solicitudes}
+          rutaIds={rutaIds}
+          recicladorLat={recicladorLat}
+          recicladorLng={recicladorLon}
+        />
+      </View>
+
+      {/* ── Leyenda ── */}
+      <View style={styles.legend}>
+        {[
+          { color: "#22C55E", label: "solicitud" },
+          { color: "#EF4444", label: "emergencia" },
+          { color: Colors.teal, label: "en camino" },
+          { color: "#9CA3AF", label: "tú" },
+        ].map((l) => (
+          <View key={l.label} style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: l.color }]} />
+            <Text style={styles.legendLabel}>{l.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* ── Lista de solicitudes ordenadas por proximidad ── */}
+      <FlatList
+        data={solicitudesOrdenadas}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderSolicitud}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyCard}>
+            <MaterialCommunityIcons
+              name={cargando ? "loading" : "check-circle-outline"}
+              size={32}
+              color={cargando ? Colors.teal : Colors.gray300}
+            />
+            <Text style={styles.emptyText}>
+              {cargando ? "Buscando solicitudes…" : "No hay solicitudes pendientes"}
+            </Text>
+          </View>
+        }
       />
+
+      {/* ── Barra inferior: métricas + nivel ── */}
+      <View style={styles.bottomBar}>
+        <MaterialCommunityIcons name="recycle" size={16} color={Colors.teal} />
+        <Text style={styles.bottomText}>
+          {"Hoy: "}
+          <Text style={styles.bottomBold}>{kgSesion.toFixed(1)} kg</Text>
+          {" recogidos"}
+        </Text>
+        <View style={styles.flex1} />
+        {tiempoRuta !== null && (
+          <>
+            <MaterialCommunityIcons name="clock-outline" size={16} color={Colors.gray500} />
+            <Text style={styles.bottomText}>
+              <Text style={styles.bottomBold}>~{Math.round(tiempoRuta)} min</Text>
+              {" ruta"}
+            </Text>
+          </>
+        )}
+        <MaterialCommunityIcons name={nivel.icon as any} size={16} color={nivel.color} />
+        <Text style={[styles.bottomNivel, { color: nivel.color }]}>{nivel.label}</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.gray50 },
-  content: { paddingHorizontal: Spacing.s4, paddingTop: Spacing.s3, gap: Spacing.s3 },
-
-  // ── Action bar ──
-  actionBar: { flexDirection: "row", gap: Spacing.s2 },
-  actionBtn: { flex: 1, borderRadius: BorderRadius.lg },
-  actionBtnOutlined: { borderColor: Colors.teal, borderWidth: 1.5 },
-  actionBtnLabel: { fontFamily: FontFamily.dmSans700, fontSize: 13 },
-  actionBtnContent: { minHeight: 48 },
-
-  // ── Status ──
-  statusRow: { flexDirection: "row", alignItems: "center", gap: Spacing.s2, minHeight: 20 },
-  statusText: { flex: 1, fontFamily: FontFamily.dmSans400, fontSize: 12, color: Colors.gray500 },
-  distPill: {
-    flexDirection: "row", alignItems: "center", gap: 3,
-    backgroundColor: `${Colors.teal}15`,
-    paddingHorizontal: Spacing.s2, paddingVertical: 2,
-    borderRadius: BorderRadius.full,
+  root: {
+    flex: 1,
+    backgroundColor: Colors.white,
   },
-  distLabel: { fontFamily: FontFamily.dmMono500, fontSize: 11, color: Colors.teal },
+  flex1: { flex: 1 },
 
-  // ── KPIs ──
-  kpiRow: { flexDirection: "row", gap: Spacing.s2 },
-  kpiCard: {
-    flex: 1, backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
-    padding: Spacing.s3, alignItems: "center", borderTopWidth: 3,
+  // ── Banner ──
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.navy,
+    paddingHorizontal: Spacing.s4,
+    paddingVertical: Spacing.s3,
+    gap: Spacing.s2,
+    minHeight: 52,
+  },
+  bannerText: {
+    fontFamily: FontFamily.sora700,
+    fontSize: 16,
+    color: Colors.white,
+    letterSpacing: -0.2,
+  },
+
+  // ── Mapa ──
+  mapWrap: {
+    height: MAP_HEIGHT,
+    backgroundColor: Colors.gray200,
+  },
+
+  // ── Leyenda ──
+  legend: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.gray50,
+    paddingHorizontal: Spacing.s4,
+    paddingVertical: Spacing.s2,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray200,
+  },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  legendDot: { width: 9, height: 9, borderRadius: 5 },
+  legendLabel: {
+    fontFamily: FontFamily.dmSans500,
+    fontSize: 11,
+    color: Colors.gray700,
+  },
+
+  // ── Lista ──
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    padding: Spacing.s4,
+    gap: Spacing.s3,
+    paddingBottom: Spacing.s6,
+  },
+
+  // ── Fila de solicitud ──
+  listCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    backgroundColor: Colors.white,
+    paddingVertical: Spacing.s3,
+    paddingLeft: Spacing.s3,
+    paddingRight: Spacing.s2,
+    gap: Spacing.s3,
     ...Shadows.sm,
   },
-  kpiLabel: { fontFamily: FontFamily.dmSans400, fontSize: 11, color: Colors.gray500, marginTop: 2 },
-
-  // ── Sección ──
-  section: { gap: Spacing.s2 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: Spacing.s2 },
-  sectionTitle: { fontFamily: FontFamily.sora600, fontSize: 15, color: Colors.navy, flex: 1 },
-  routePill: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: Colors.teal,
-    paddingHorizontal: Spacing.s2, paddingVertical: 3,
-    borderRadius: BorderRadius.full,
+  orderBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  routePillText: { fontFamily: FontFamily.dmSans700, fontSize: 11, color: Colors.white },
-
-  mapLegend: {
+  orderBadgeText: {
+    fontFamily: FontFamily.dmSans700,
+    fontSize: 13,
+    color: Colors.white,
+  },
+  listCardInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  listCardTitle: {
+    fontFamily: FontFamily.dmSans700,
+    fontSize: 15,
+    color: Colors.navy,
+  },
+  listCardId: {
+    fontFamily: FontFamily.dmSans400,
+    fontSize: 13,
+    color: Colors.gray500,
+  },
+  listCardMeta: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     flexWrap: "wrap",
-    gap: Spacing.s3,
-    paddingTop: Spacing.s2,
-    paddingHorizontal: Spacing.s1,
   },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontFamily: FontFamily.dmSans500, fontSize: 11, color: Colors.gray700 },
-
-  // ── Solicitud activa ──
-  activeSurface: {
-    borderRadius: BorderRadius.xl, padding: Spacing.s4,
-    backgroundColor: Colors.white, borderLeftWidth: 4, borderLeftColor: Colors.teal,
+  listCardMetaText: {
+    fontFamily: FontFamily.dmSans400,
+    fontSize: 12,
+    color: Colors.gray500,
   },
-  activeHeader: { flexDirection: "row", alignItems: "center", gap: Spacing.s2 },
-  activePulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.teal },
-  activeHeaderLabel: {
-    fontFamily: FontFamily.dmSans700, fontSize: 11, color: Colors.teal,
-    textTransform: "uppercase", letterSpacing: 0.5,
+  listCardDesc: {
+    fontFamily: FontFamily.dmSans400,
+    fontSize: 12,
+    color: Colors.gray400,
+    fontStyle: "italic",
   },
-  quickActions: { flexDirection: "row", gap: Spacing.s2, marginTop: Spacing.s3 },
-  quickBtn: { borderRadius: BorderRadius.lg },
-
-  // ── Parámetros ──
-  paramsToggle: {
-    flexDirection: "row", alignItems: "center", gap: Spacing.s2,
-    paddingVertical: Spacing.s2, paddingHorizontal: Spacing.s3,
-    backgroundColor: Colors.white, borderRadius: BorderRadius.md,
-    borderWidth: 1, borderColor: Colors.gray200,
+  listBtn: {
+    borderRadius: BorderRadius.md,
+    flexShrink: 0,
   },
-  paramsToggleLabel: { flex: 1, fontFamily: FontFamily.dmSans500, fontSize: 13, color: Colors.gray700 },
-  paramsPanel: { backgroundColor: Colors.white, borderRadius: BorderRadius.lg, padding: Spacing.s3, gap: Spacing.s2 },
-  paramsRow: { flexDirection: "row", gap: Spacing.s2 },
-  paramInput: { backgroundColor: Colors.white },
+  listBtnLabel: {
+    fontFamily: FontFamily.dmSans700,
+    fontSize: 13,
+    marginHorizontal: Spacing.s2,
+  },
 
   // ── Empty ──
-  empty: { alignItems: "center", paddingVertical: Spacing.s8, gap: Spacing.s2 },
+  emptyCard: {
+    alignItems: "center",
+    gap: Spacing.s3,
+    paddingVertical: Spacing.s8,
+  },
+  emptyText: {
+    fontFamily: FontFamily.dmSans500,
+    fontSize: 15,
+    color: Colors.gray500,
+    textAlign: "center",
+  },
 
-  // ── FAB ──
-  fab: { position: "absolute", right: Spacing.s4, bottom: Spacing.s4 },
+  // ── Bottom bar ──
+  bottomBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.gray50,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray200,
+    paddingHorizontal: Spacing.s4,
+    paddingVertical: Spacing.s3,
+    gap: Spacing.s2,
+    minHeight: 48,
+  },
+  bottomText: {
+    fontFamily: FontFamily.dmSans400,
+    fontSize: 14,
+    color: Colors.gray700,
+  },
+  bottomBold: {
+    fontFamily: FontFamily.dmSans700,
+    color: Colors.navy,
+  },
+  bottomNivel: {
+    fontFamily: FontFamily.dmSans700,
+    fontSize: 14,
+  },
 });
+

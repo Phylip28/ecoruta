@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Button, Card, Text, TextInput } from "react-native-paper";
@@ -59,8 +59,28 @@ export function CiudadanoHomeScreen({ onFeedback }: CiudadanoHomeScreenProps) {
   }, [onFeedback]);
 
   useEffect(() => {
+    // Load on mount so hero card metrics are ready on the acciones tab
+    void fetchHistorial();
+  }, [fetchHistorial]);
+
+  useEffect(() => {
     if (tab === "historial") void fetchHistorial();
   }, [tab, fetchHistorial]);
+
+  const now = new Date();
+  const kgEstimado = useMemo(
+    () => historialItems.reduce((sum, it) => sum + (it.kgEstimados ?? 0), 0),
+    [historialItems],
+  );
+  const reportesMes = useMemo(
+    () =>
+      historialItems.filter((it) => {
+        const d = new Date(it.fecha);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      }).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [historialItems],
+  );
 
   async function enviarSolicitud() {
     const tid = env.mobile.demoTelegramId;
@@ -134,7 +154,7 @@ export function CiudadanoHomeScreen({ onFeedback }: CiudadanoHomeScreenProps) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <CiudadanoHeroCard />
+          <CiudadanoHeroCard kgEstimado={kgEstimado} reportesMes={reportesMes} />
 
           {/* Reporte con foto */}
           <ReporteConFoto onFeedback={onFeedback} />

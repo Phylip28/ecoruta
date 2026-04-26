@@ -1,14 +1,75 @@
 import { useMemo } from "react";
-import MapView, { Marker, Polyline, type LatLng } from "react-native-maps";
-
-import { Colors } from "../../../design-system";
+import { StyleSheet, View } from "react-native";
+import WebView from "react-native-webview";
 
 import type { MapaSolicitudesProps } from "./mapaSolicitudesProps";
 
-function pinColorForSolicitud(tipo: "emergencia" | "solicitud", estado: string): "red" | "green" | "purple" {
-  if (tipo === "emergencia") return "red";
-  if (estado === "en_camino") return "purple";
-  return "green";
+function buildLeafletHtml(
+  solicitudes: MapaSolicitudesProps["solicitudes"],
+  rutaIds: number[],
+  recicladorLat: number,
+  recicladorLng: number,
+): string {
+  const markers = solicitudes.map((s) => {
+    const color =
+      s.tipo === "emergencia" ? "#EF4444" : s.estado === "en_camino" ? "#3B82F6" : "#22C55E";
+    const label = `#${s.id} · ${s.material ?? "mixto"}`;
+    return `addPin(${s.latitud}, ${s.longitud}, "${color}", "${label}");`;
+  });
+
+  // Route polyline ordered by rutaIds
+  let polylineJs = "";
+  if (rutaIds.length > 1) {
+    const porId = new Map(solicitudes.map((s) => [s.id, s]));
+    const coords = rutaIds
+      .map((id) => porId.get(id))
+      .filter(Boolean)
+      .map((s) => `[${s!.latitud}, ${s!.longitud}]`);
+    polylineJs = `L.polyline([${coords.join(",")}], {color:"#005C53",weight:3,dashArray:"8,6"}).addTo(map);`;
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>html,body,#map{margin:0;padding:0;width:100%;height:100%;}</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var map = L.map("map", {zoomControl:true, attributionControl:false});
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+function addPin(lat, lon, color, label) {
+  var icon = L.divIcon({
+    html: '<div style="background:'+color+';width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>',
+    className: "",
+    iconSize: [14,14],
+    iconAnchor: [7,7],
+  });
+  L.marker([lat,lon],{icon:icon}).bindPopup(label).addTo(map);
+}
+
+// Reciclador marker (gray)
+addPin(${recicladorLat}, ${recicladorLng}, "#6B7280", "Tu posición");
+
+${markers.join("\n")}
+${polylineJs}
+
+// Fit bounds
+var allLat = [${[recicladorLat, ...solicitudes.map((s) => s.latitud)].join(",")}];
+var allLon = [${[recicladorLng, ...solicitudes.map((s) => s.longitud)].join(",")}];
+if (allLat.length > 0) {
+  map.fitBounds([
+    [Math.min(...allLat)-0.005, Math.min(...allLon)-0.005],
+    [Math.max(...allLat)+0.005, Math.max(...allLon)+0.005]
+  ]);
+}
+</script>
+</body>
+</html>`;
 }
 
 export function MapaSolicitudes({
@@ -17,72 +78,27 @@ export function MapaSolicitudes({
   recicladorLat,
   recicladorLng,
 }: MapaSolicitudesProps) {
-  const routeCoords: LatLng[] = useMemo(() => {
-    if (rutaIds.length === 0) return [];
-    const porId = new Map(solicitudes.map((s) => [s.id, s]));
-    const coords: LatLng[] = [];
-    for (const id of rutaIds) {
-      const s = porId.get(id);
-      if (s) coords.push({ latitude: s.latitud, longitude: s.longitud });
-    }
-    return coords;
-  }, [rutaIds, solicitudes]);
-
-  const initialRegion = useMemo(() => {
-    if (solicitudes.length === 0) {
-      return {
-        latitude: recicladorLat,
-        longitude: recicladorLng,
-        latitudeDelta: 0.06,
-        longitudeDelta: 0.06,
-      };
-    }
-    const lats = solicitudes.map((s) => s.latitud);
-    const lons = solicitudes.map((s) => s.longitud);
-    const minLat = Math.min(...lats, recicladorLat);
-    const maxLat = Math.max(...lats, recicladorLat);
-    const minLon = Math.min(...lons, recicladorLng);
-    const maxLon = Math.max(...lons, recicladorLng);
-    const midLat = (minLat + maxLat) / 2;
-    const midLon = (minLon + maxLon) / 2;
-    return {
-      latitude: midLat,
-      longitude: midLon,
-      latitudeDelta: Math.max(0.02, (maxLat - minLat) * 1.8 || 0.06),
-      longitudeDelta: Math.max(0.02, (maxLon - minLon) * 1.8 || 0.06),
-    };
-  }, [recicladorLat, recicladorLng, solicitudes]);
+  const html = useMemo(
+    () => buildLeafletHtml(solicitudes, rutaIds, recicladorLat, recicladorLng),
+    [solicitudes, rutaIds, recicladorLat, recicladorLng],
+  );
 
   return (
-    <MapView
-      style={{ height: 220, width: "100%", borderRadius: 16 }}
-      initialRegion={initialRegion}
-      accessibilityLabel="Mapa de solicitudes pendientes y en camino"
-    >
-      <Marker
-        coordinate={{ latitude: recicladorLat, longitude: recicladorLng }}
-        title="Tu posición"
-        pinColor="purple"
-        accessibilityLabel="Marcador de posición del reciclador"
+    <View style={styles.container}>
+      <WebView
+        source={{ html, baseUrl: "https://tile.openstreetmap.org" }}
+        style={styles.webview}
+        scrollEnabled={false}
+        javaScriptEnabled
+        originWhitelist={["*"]}
+        mixedContentMode="always"
+        accessibilityLabel="Mapa de solicitudes"
       />
-      {solicitudes.map((s) => (
-        <Marker
-          key={s.id}
-          coordinate={{ latitude: s.latitud, longitude: s.longitud }}
-          title={`#${s.id} · ${s.material ?? "mixto"}`}
-          description={s.tipo === "emergencia" ? "Emergencia" : "Solicitud"}
-          pinColor={pinColorForSolicitud(s.tipo, s.estado)}
-          accessibilityLabel={`Solicitud ${s.id}, ${s.estado}`}
-        />
-      ))}
-      {routeCoords.length > 1 ? (
-        <Polyline
-          coordinates={routeCoords}
-          strokeColor={Colors.teal}
-          strokeWidth={3}
-          lineDashPattern={[8, 6]}
-        />
-      ) : null}
-    </MapView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, width: "100%" },
+  webview: { flex: 1 },
+});

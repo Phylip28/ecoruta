@@ -21,8 +21,10 @@ async def historial_ciudadano(
             "fecha": item["created_at"],
             "descripcion": item.get("descripcion"),
             "material": item.get("material"),
+            "reciclador_id": item.get("reciclador_id"),
             "reciclador_nombre": None,
             "miniatura_uri": item.get("foto_url"),
+            "kg_estimados": item.get("kg_estimados", 0),
         }
         for item in store.list()
     ]

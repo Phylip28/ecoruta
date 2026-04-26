@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { SafeAreaView, StyleSheet, View } from "react-native";
+import { Pressable, SafeAreaView, StyleSheet, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Appbar, Snackbar, Text } from "react-native-paper";
+import { Snackbar, Text } from "react-native-paper";
 
 import { EcoLogo } from "../../../components/EcoLogo";
 import { getHealth } from "../../../core/api/client";
@@ -97,22 +97,26 @@ export function HomeScreen({ role, onLogout }: HomeScreenProps) {
         </View>
 
         {/* Dev: Design system */}
-        <Appbar.Action
-          icon="palette-outline"
-          color={Colors.gray300}
-          size={19}
+        <Pressable
           onPress={() => setMostrarDesignSystem(true)}
+          style={styles.headerBtn}
+          hitSlop={8}
+          accessibilityRole="button"
           accessibilityLabel="Design system"
-        />
+        >
+          <MaterialCommunityIcons name="palette-outline" size={22} color={Colors.gray300} />
+        </Pressable>
 
-        {/* Logout / back to profile */}
-        <Appbar.Action
-          icon="arrow-left"
-          color={Colors.gray700}
-          size={21}
+        {/* Salir / volver a elegir perfil */}
+        <Pressable
           onPress={onLogout}
+          style={styles.headerBtn}
+          hitSlop={8}
+          accessibilityRole="button"
           accessibilityLabel="Volver a elegir perfil"
-        />
+        >
+          <MaterialCommunityIcons name="logout" size={22} color={Colors.gray700} />
+        </Pressable>
       </View>
 
       {/* ── Content ── */}
@@ -175,5 +179,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
   },
 });

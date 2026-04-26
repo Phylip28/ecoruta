@@ -9,18 +9,23 @@ import {
   Spacing,
 } from "../../../design-system";
 
-/** Resumen visual alineado con features ciudadano — datos demo de impacto. */
-export function CiudadanoHeroCard() {
+type CiudadanoHeroCardProps = {
+  kgEstimado: number;
+  reportesMes: number;
+};
+
+/** Resumen visual de actividad real del ciudadano. */
+export function CiudadanoHeroCard({ kgEstimado, reportesMes }: CiudadanoHeroCardProps) {
   return (
     <Surface style={[styles.card, Shadows.sm]} elevation={0}>
       <View style={styles.metricRow}>
         <View style={styles.metricBlock}>
-          <Text style={styles.metricValue}>12,4 kg</Text>
+          <Text style={styles.metricValue}>{kgEstimado.toFixed(1)} kg</Text>
           <Text style={styles.metricLabel}>reciclaje estimado</Text>
         </View>
         <View style={styles.metricDivider} />
         <View style={styles.metricBlock}>
-          <Text style={styles.metricValue}>3</Text>
+          <Text style={styles.metricValue}>{reportesMes}</Text>
           <Text style={styles.metricLabel}>reportes este mes</Text>
         </View>
       </View>
